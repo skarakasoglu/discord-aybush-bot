@@ -9,14 +9,32 @@ import (
 )
 
 func (a *Aybus) onURLSend(session *discordgo.Session, messageCreate *discordgo.MessageCreate) {
-	if !func() bool {
-			for _, val := range configuration.Manager.UrlRestriction.RestrictedChannels {
-				if messageCreate.ChannelID == val {
-					return true
+	isChannelRestricted := func() bool {
+		for _, val := range configuration.Manager.UrlRestriction.RestrictedChannels {
+			if messageCreate.ChannelID == val {
+				return true
+			}
+		}
+		return false
+	}()
+
+	if !isChannelRestricted {
+		return
+	}
+
+	isRoleRestricted := func() bool {
+		for _, role := range configuration.Manager.Roles.ModerationRoles {
+			for _, memberRole := range messageCreate.Member.Roles {
+				if memberRole == role {
+					return false
 				}
 			}
-			return false
-		}() {
+		}
+
+		return true
+	}()
+
+	if !isRoleRestricted {
 		return
 	}
 

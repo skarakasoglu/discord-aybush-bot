@@ -34,6 +34,7 @@ func ReadConfigurationFile(path string, fileName string) {
 
 type roles struct{
 	DefaultMemberRole string
+	ModerationRoles []string
 }
 
 type channels struct{

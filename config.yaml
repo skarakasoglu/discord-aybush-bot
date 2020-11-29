@@ -1,5 +1,8 @@
 roles:
   defaultMemberRole: 782242269834641409
+  moderationRoles:
+    - 782242591986155530
+    - 782242378668310539
 
 channels:
   botLog: 782242998767058944

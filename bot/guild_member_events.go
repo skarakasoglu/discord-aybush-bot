@@ -47,7 +47,7 @@ func (a* Aybus) onMemberLeave(session *discordgo.Session, memberLeave *discordgo
 		log.Printf("Error on obtaining guild: %v", err)
 	}
 
-	fmt.Printf("%v left from %v", memberLeave.User.Username, guild.Name)
+	log.Printf("%v left from %v", memberLeave.User.Username, guild.Name)
 
 	botLogMsg := fmt.Sprintf("> **ID**: %v, **Kullanıcı Adı**: %v#%v sunucudan ayrıldı.",
 		memberLeave.User.ID, memberLeave.User.Username, memberLeave.User.Discriminator)
