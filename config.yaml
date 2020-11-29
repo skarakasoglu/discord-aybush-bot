@@ -1,2 +1,31 @@
-credentials:
-  token: token 
+roles:
+  defaultMemberRole: 782242269834641409
+
+channels:
+  botLog: 782242998767058944
+
+presenceUpdate:
+  presenceUpdateFrequency: 5000
+  statuses:
+    - "Instagram: aybuse.uslu"
+    - "Youtube: Aybusee"
+    - "Twitter: aybuseuslu"
+
+greeting:
+  greetingDirectMessage: "**Aybuse**'nin Sunucusuna Hoşgeldin :tada:\n:small_orange_diamond: Hemen ***Kurallar*** kanalına bakmayı unutma,\n:small_orange_diamond: Eğer bir sorun olursa moderatörlere bildirebilirsin.\n\n**Aybuse'yi sosyal medyadan takip etmek için**\n:small_blue_diamond: İnstagram: *https://www.instagram.com/aybuse.uslu/*\n:small_blue_diamond: YouTube: *https://www.youtube.com/channel/UCercN6vdTVn07CadGL1Nesw*\n:small_blue_diamond: Twitter: *https://twitter.com/aybuseuslu*"
+  greetingChannel: 782242976419282986
+  greetingMessages:
+    - Uyandığında <#386992275332399108> e 'Günaydın' demeyi unutma saat kaçta uyandığını merak ediyoruz.
+    - Günün her saatinde sohbet odalarında boş yapılıyor, istersen bi' dene.
+    - "Yayından bol bol clip alıp #clipler odasına atmayı unutma, sen de turuncu bir 'clipper' olabilirsin!"
+    - Gacıysan 'huri' rolünü denemelisin!
+    - Buyur kolonya <:golonya:691917008341565452> aman diyim bize corona bulaştırma.
+    - Birlikte çıplak noel babaları popüler yapalım mı?
+    - O da ne, uçan bir Çoti mi?
+    - Aybusenin buffını gördün mü?
+    - Kütahya'nın kireçli suyundan bi' bardak ister misin?
+
+ticket:
+  messageId: 782600181534687275
+  reaction: 🎟️
+  roleId: 782242338167849011

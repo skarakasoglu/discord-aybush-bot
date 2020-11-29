@@ -15,23 +15,25 @@ import (
 var (
 	configurationFileName string
 	configurationFilePath string
+	accessToken string
 )
 
 func init() {
-	configurationFileName = *flag.String("cfg-file", "config", "application configuration file name")
-	configurationFilePath = *flag.String("cfg-file-path", ".", "application configuration file path")
+	flag.StringVar(&accessToken,"token", "", "discord api application access token")
+	flag.StringVar(&configurationFileName,"cfg-file", "config", "application configuration file name")
+	flag.StringVar(&configurationFilePath, "cfg-file-path", ".", "application configuration file path")
 	flag.Parse()
 
 	configuration.ReadConfigurationFile(configurationFilePath, configurationFileName)
 }
 
 func main() {
-
-	dg, err := discordgo.New(fmt.Sprintf("Bot %v", configuration.Manager.Credentials.GetToken()))
+	dg, err := discordgo.New(fmt.Sprintf("Bot %v", accessToken))
 	if err != nil {
 		log.Fatalf("Failed to create: %v", err)
 	}
 
+	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 	err = dg.Open()
 	if err != nil {
 		log.Fatalf("Failed to open websocket connection: %v", err)

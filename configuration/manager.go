@@ -10,7 +10,11 @@ var (
 )
 
 type manager struct{
-	Credentials credentials
+	Roles roles
+	Channels channels
+	PresenceUpdate presenceUpdate
+	Greeting greeting
+	Ticket ticket
 }
 
 func ReadConfigurationFile(path string, fileName string) {
@@ -27,10 +31,27 @@ func ReadConfigurationFile(path string, fileName string) {
 	}
 }
 
-type credentials struct{
-	Token string
+type roles struct{
+	DefaultMemberRole string
 }
 
-func (c credentials) GetToken() string {
-	return c.Token
+type channels struct{
+	BotLog string
+}
+
+type greeting struct{
+	GreetingChannel string
+	GreetingDirectMessage string
+	GreetingMessages []string
+}
+
+type presenceUpdate struct{
+	PresenceUpdateFrequency int
+	Statuses []string
+}
+
+type ticket struct{
+	MessageId string
+	Reaction string
+	RoleId string
 }
