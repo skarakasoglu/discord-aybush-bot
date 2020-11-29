@@ -25,6 +25,11 @@ greeting:
     - Aybusenin buffını gördün mü?
     - Kütahya'nın kireçli suyundan bi' bardak ister misin?
 
+urlRestriction:
+  warningMessage: "bu metin kanalında link paylaşımı yasaktır."
+  restrictedChannels:
+    - 782242136731942945
+
 ticket:
   messageId: 782600181534687275
   reaction: 🎟️

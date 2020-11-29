@@ -15,6 +15,7 @@ type manager struct{
 	PresenceUpdate presenceUpdate
 	Greeting greeting
 	Ticket ticket
+	UrlRestriction urlRestriction
 }
 
 func ReadConfigurationFile(path string, fileName string) {
@@ -48,6 +49,11 @@ type greeting struct{
 type presenceUpdate struct{
 	PresenceUpdateFrequency int
 	Statuses []string
+}
+
+type urlRestriction struct{
+	WarningMessage string
+	RestrictedChannels []string
 }
 
 type ticket struct{

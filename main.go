@@ -36,7 +36,7 @@ func main() {
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 	err = dg.Open()
 	if err != nil {
-		log.Fatalf("Failed to open websocket connection: %v", err)
+		log.Fatalf("Failed to open websocket connection with Discord API: %v", err)
 	}
 
 	aybusBot := bot.New(dg)
