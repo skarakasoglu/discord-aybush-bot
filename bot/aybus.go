@@ -2,6 +2,7 @@ package bot
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"github.com/skarakasoglu/discord-aybush-bot/bot/antispam"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"log"
 	"math/rand"
@@ -16,12 +17,25 @@ var (
 type Aybus struct{
 	discordConnection *discordgo.Session
 	running bool
+
+	antiSpam antispam.AntiSpam
 }
 
 func New(discordConnection *discordgo.Session) *Aybus{
-	return &Aybus{
+	aybus := &Aybus{
 		discordConnection: discordConnection,
 	}
+
+	antiSpamConfiguration := configuration.Manager.AntiSpam
+	aybus.antiSpam = antispam.NewAntiSpam(antiSpamConfiguration.MaxInterval, antiSpamConfiguration.MaxDuplicatesInterval,
+		configuration.Manager.Roles.ModerationRoles, []string{configuration.Manager.BotRoleId})
+	aybus.antiSpam.AddProtectionConfig(antispam.ProtectionConfig{
+		Threshold:     antiSpamConfiguration.Mute.Threshold,
+		MaxDuplicates: antiSpamConfiguration.Mute.MaxDuplicates,
+		Callback:      aybus.muteUserOnSpam,
+	})
+
+	return aybus
 }
 
 func (a* Aybus) Start() {
@@ -33,6 +47,7 @@ func (a* Aybus) Start() {
 	a.discordConnection.AddHandler(a.onURLSend)
 	a.discordConnection.AddHandler(a.onTicketReactionAdd)
 	a.discordConnection.AddHandler(a.onTicketReactionRemove)
+	a.discordConnection.AddHandler(a.onSpamCheck)
 
 	go a.updatePresence()
 }

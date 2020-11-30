@@ -10,12 +10,14 @@ var (
 )
 
 type manager struct{
+	BotRoleId string
 	Roles roles
 	Channels channels
 	PresenceUpdate presenceUpdate
 	Greeting greeting
 	Ticket ticket
 	UrlRestriction urlRestriction
+	AntiSpam antiSpam
 }
 
 func ReadConfigurationFile(path string, fileName string) {
@@ -34,6 +36,7 @@ func ReadConfigurationFile(path string, fileName string) {
 
 type roles struct{
 	DefaultMemberRole string
+	MuteRole string
 	ModerationRoles []string
 }
 
@@ -61,4 +64,18 @@ type ticket struct{
 	MessageId string
 	Reaction string
 	RoleId string
+}
+
+type antiSpam struct{
+	Mute mute
+	MaxInterval int
+	MaxDuplicatesInterval int
+}
+
+type mute struct{
+	Threshold int
+	MaxDuplicates int
+	Message string
+	ChannelMessage string
+	Duration int
 }

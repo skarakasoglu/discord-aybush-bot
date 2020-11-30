@@ -1,8 +1,14 @@
+#Bot's own user id for ignoring it in some cases.
+botUserId: 607906445480034304
+
+#Role groups
 roles:
   defaultMemberRole: 782242269834641409
+  muteRole: 782242305306132540
   moderationRoles:
     - 782242591986155530
     - 782242378668310539
+    - 782244241254252585
 
 channels:
   botLog: 782242998767058944
@@ -37,3 +43,14 @@ ticket:
   messageId: 782600181534687275
   reaction: 🎟️
   roleId: 782242338167849011
+
+#Spam protection configurations
+antiSpam:
+  mute:
+    threshold: 5
+    maxDuplicates: 3
+    message: "Spam yaptığın için %v dakika susturuldun. Bu davranışa devam edersen sunucudan atılabilirsin."
+    channelMessage: "<@%v> spam sebebiyle %v dakika susturuldu."
+    duration: 600000
+  maxInterval: 2000
+  maxDuplicatesInterval: 300000
