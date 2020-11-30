@@ -3,6 +3,7 @@ package antispam
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"log"
 	"sync"
 	"time"
 )
