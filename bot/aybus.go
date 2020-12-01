@@ -3,10 +3,16 @@ package bot
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/skarakasoglu/discord-aybush-bot/bot/antispam"
+	"github.com/skarakasoglu/discord-aybush-bot/bot/commands"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"log"
 	"math/rand"
 	"time"
+)
+
+const (
+	COMMAND_PREFIX = "!"
+	HELP_ARG = "help"
 )
 
 var (
@@ -19,6 +25,7 @@ type Aybus struct{
 	running bool
 
 	antiSpam antispam.AntiSpam
+	commands map[string]commands.Command
 }
 
 func New(discordConnection *discordgo.Session) *Aybus{
@@ -35,6 +42,17 @@ func New(discordConnection *discordgo.Session) *Aybus{
 		Callback:      aybus.muteUserOnSpam,
 	})
 
+	aybus.commands = make(map[string]commands.Command)
+
+	joiningDateCmd := commands.NewJoiningDateCommand(discordConnection)
+	aybus.commands[joiningDateCmd.Name()] = joiningDateCmd
+
+	clearMsgCmd := commands.NewClearMessageCommand(discordConnection)
+	aybus.commands[clearMsgCmd.Name()] = clearMsgCmd
+
+	muteCmd := commands.NewMuteCommand(discordConnection)
+	aybus.commands[muteCmd.Name()] = muteCmd
+
 	return aybus
 }
 
@@ -44,6 +62,7 @@ func (a* Aybus) Start() {
 	log.Println("Registering handlers.")
 	a.discordConnection.AddHandler(a.onMemberJoin)
 	a.discordConnection.AddHandler(a.onMemberLeave)
+	a.discordConnection.AddHandler(a.onCommandReceived)
 	a.discordConnection.AddHandler(a.onURLSend)
 	a.discordConnection.AddHandler(a.onTicketReactionAdd)
 	a.discordConnection.AddHandler(a.onTicketReactionRemove)

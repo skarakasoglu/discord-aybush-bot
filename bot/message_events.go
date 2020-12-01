@@ -6,8 +6,52 @@ import (
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"log"
 	"mvdan.cc/xurls"
+	"strings"
 	"time"
 )
+
+func (a *Aybus) onCommandReceived(session *discordgo.Session, messageCreate *discordgo.MessageCreate) {
+	messageContent := messageCreate.Message.Content
+	isCommand := strings.HasPrefix(messageContent, COMMAND_PREFIX)
+	if !isCommand {
+		return
+	}
+
+	commandArguments := strings.Split(strings.TrimPrefix(messageContent, COMMAND_PREFIX), " ")
+	if len(commandArguments) < 1 {
+		return
+	}
+
+	cmd, ok := a.commands[commandArguments[0]]
+	if !ok {
+		log.Printf("Invalid command received. The command entered is %v", commandArguments[0])
+		return
+	}
+
+	if len(commandArguments) == 2 {
+		if strings.ToLower(commandArguments[1]) == HELP_ARG {
+			helpMsg := fmt.Sprintf("<@%v>, %v", messageCreate.Author.ID, cmd.Usage())
+			_, err := session.ChannelMessageSend(messageCreate.ChannelID, helpMsg)
+			if err != nil {
+				log.Printf("Error on sending command usage message to the channel: %v", err)
+			}
+			return
+		}
+	}
+
+	response, err := cmd.Execute(messageCreate.Message)
+	if err != nil {
+		log.Printf("Error on executing the command: %v", err)
+		return
+	}
+
+	if response != "" {
+		_, err = session.ChannelMessageSend(messageCreate.ChannelID, response)
+		if err != nil {
+			log.Printf("Error on sending command response to the channel: %v", err)
+		}
+	}
+}
 
 func (a *Aybus) onURLSend(session *discordgo.Session, messageCreate *discordgo.MessageCreate) {
 	isChannelRestricted := func() bool {
@@ -80,6 +124,8 @@ func (a *Aybus) muteUserOnSpam(guildId string, memberId string, spamMessages []*
 		}
 	}
 
+	muteDurationInMutes := configuration.Manager.AntiSpam.Mute.Duration / 60000
+
 	// After time passes, mute role will be removed from the guild member.
 	go func() {
 		time.Sleep(time.Duration(configuration.Manager.AntiSpam.Mute.Duration) * time.Millisecond)
@@ -87,9 +133,16 @@ func (a *Aybus) muteUserOnSpam(guildId string, memberId string, spamMessages []*
 		if err != nil {
 			log.Printf("Error on removing muted role from member: %v", err)
 		}
+
+		botLogMsg := fmt.Sprintf("<@%v> kullanıcısının spam sebebiyle verilen %v dakikalık susturması kaldırıldı.", memberId,
+			muteDurationInMutes)
+		_, err = a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
+		if err != nil {
+			log.Printf("Error on writing log to bot log channel: %v", err)
+		}
+
 	}()
 
-	muteDurationInMutes := configuration.Manager.AntiSpam.Mute.Duration / 60000
 	notificationMessageToGuildChannel := fmt.Sprintf(configuration.Manager.AntiSpam.Mute.ChannelMessage, memberId, muteDurationInMutes)
 	_, err = a.discordConnection.ChannelMessageSend(lastChannelId, notificationMessageToGuildChannel)
 	if err != nil {
@@ -107,4 +160,11 @@ func (a *Aybus) muteUserOnSpam(guildId string, memberId string, spamMessages []*
 	if err != nil{
 		log.Printf("Error on sending mute notification message to DM channel: %v", err)
 	}
+
+	botLogMsg := fmt.Sprintf("<@%v> kullanıcısı spam sebebiyle %v dakika susturuldu.", memberId, muteDurationInMutes)
+	_, err = a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
+	if err != nil {
+		log.Printf("Error on writing log to bot log channel: %v", err)
+	}
+
 }

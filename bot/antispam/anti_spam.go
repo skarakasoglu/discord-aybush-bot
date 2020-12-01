@@ -1,7 +1,6 @@
 package antispam
 
 import (
-	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"log"
 	"sync"
@@ -103,7 +102,6 @@ func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
 		var spamMatches []*discordgo.Message
 		var duplicateMatches []*discordgo.Message
 
-		fmt.Println(protection)
 		memberMessages.messageMtx.Lock()
 		for _, memberMessage := range memberMessages.messages {
 			sentTime, err := memberMessage.Timestamp.Parse()
@@ -116,7 +114,8 @@ func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
 				spamMatches = append(spamMatches, memberMessage)
 			}
 
-			if (time.Now().UnixNano() / int64(time.Millisecond)) - (sentTime.UnixNano() / int64(time.Millisecond)) <  int64(antiSpam.maxDuplicatesInterval) {
+			if (time.Now().UnixNano() / int64(time.Millisecond)) - (sentTime.UnixNano() / int64(time.Millisecond)) <  int64(antiSpam.maxDuplicatesInterval) &&
+				memberMessage.Content == message.Content {
 				duplicateMatches = append(duplicateMatches, memberMessage)
 			}
 

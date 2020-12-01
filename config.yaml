@@ -49,7 +49,7 @@ antiSpam:
   mute:
     threshold: 5
     maxDuplicates: 3
-    message: "Spam yaptığın için %v dakika susturuldun. Bu davranışa devam edersen sunucudan atılabilirsin."
+    message: "Spam yaptığın için %v dakika susturuldun. Bu davranışına devam edersen sunucudan atılabilirsin."
     channelMessage: "<@%v> spam sebebiyle %v dakika susturuldu."
     duration: 600000
   maxInterval: 2000
