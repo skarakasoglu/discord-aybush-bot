@@ -12,7 +12,7 @@ const (
 	MAX_CACHE_DURATION = 600
 )
 
-type guildMessages map[string]cachedMemberMessages
+type guildMessages map[string]*cachedMemberMessages
 
 type cachedMemberMessages struct {
 	messageMtx sync.Mutex
@@ -64,32 +64,8 @@ func (antiSpam *AntiSpam) AddProtectionConfig(config ProtectionConfig) {
 	antiSpam.protectionConfigurations = append(antiSpam.protectionConfigurations, config)
 }
 
-func (antiSpam AntiSpam) OnMessage(message *discordgo.Message) {
-	isRoleIgnored := func() bool {
-		if message.Member != nil {
-			for _, role := range antiSpam.exemptRoles {
-				for _, memberRole := range message.Member.Roles {
-					if memberRole == role {
-						return true
-					}
-				}
-			}
-		}
-
-		return false
-	}()
-
-	isUserIgnored := func() bool {
-		for _, userId := range antiSpam.ignoredUsers {
-			if userId == message.Author.ID {
-				return true
-			}
-		}
-
-		return false
-	}()
-
-	if isRoleIgnored ||isUserIgnored {
+func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
+	if antiSpam.shouldIgnore(message) {
 		return
 	}
 
@@ -100,18 +76,14 @@ func (antiSpam AntiSpam) OnMessage(message *discordgo.Message) {
 
 	_, ok = antiSpam.cachedMessages[message.GuildID][message.Author.ID]
 	if !ok {
-		antiSpam.cachedMessages[message.GuildID][message.Author.ID] = cachedMemberMessages{}
+		antiSpam.cachedMessages[message.GuildID][message.Author.ID] = &cachedMemberMessages{}
 	}
 
-	antiSpam.guildMessagesMtx.Lock()
 	memberMessages, _ := antiSpam.cachedMessages[message.GuildID][message.Author.ID]
 
 	memberMessages.messageMtx.Lock()
 	memberMessages.messages = append(memberMessages.messages, message)
 	memberMessages.messageMtx.Unlock()
-
-	antiSpam.cachedMessages[message.GuildID][message.Author.ID] = memberMessages
-	antiSpam.guildMessagesMtx.Unlock()
 
 	// Delete cached messages after a certain amount of time.
 	go func() {
@@ -122,11 +94,6 @@ func (antiSpam AntiSpam) OnMessage(message *discordgo.Message) {
 				memberMessages.messageMtx.Lock()
 				memberMessages.messages = append(memberMessages.messages[:i], memberMessages.messages[i + 1:]...)
 				memberMessages.messageMtx.Unlock()
-
-				antiSpam.guildMessagesMtx.Lock()
-				antiSpam.cachedMessages[message.GuildID][message.Author.ID] = memberMessages
-				antiSpam.guildMessagesMtx.Unlock()
-
 				break
 			}
 		}
@@ -142,6 +109,7 @@ func (antiSpam AntiSpam) OnMessage(message *discordgo.Message) {
 			sentTime, err := memberMessage.Timestamp.Parse()
 			if err != nil {
 				log.Printf("Error on parsing timestamp data for a member message: %v", err)
+				continue
 			}
 
 			if (time.Now().UnixNano() / int64(time.Millisecond)) - (sentTime.UnixNano() / int64(time.Millisecond)) <  int64(antiSpam.maxInterval) {
@@ -162,3 +130,52 @@ func (antiSpam AntiSpam) OnMessage(message *discordgo.Message) {
 	}
 }
 
+func (antiSpam *AntiSpam) shouldIgnore(message *discordgo.Message) bool {
+	isRoleIgnored := func() bool {
+		if antiSpam.exemptRoles == nil {
+			return false
+		}
+
+		if message.Member != nil {
+			for _, role := range antiSpam.exemptRoles {
+				for _, memberRole := range message.Member.Roles {
+					if memberRole == role {
+						return true
+					}
+				}
+			}
+		}
+
+		return false
+	}()
+
+	isUserIgnored := func() bool {
+		if antiSpam.ignoredUsers == nil {
+			return false
+		}
+
+		for _, userId := range antiSpam.ignoredUsers {
+			if userId == message.Author.ID {
+				return true
+			}
+		}
+
+		return false
+	}()
+
+	isChannelIgnored := func() bool {
+		if antiSpam.ignoredChannels == nil {
+			return false
+		}
+
+		for _, channelId := range antiSpam.ignoredChannels {
+			if channelId == message.ChannelID {
+				return true
+			}
+		}
+
+		return false
+	}()
+
+	return isRoleIgnored || isUserIgnored || isChannelIgnored
+}
