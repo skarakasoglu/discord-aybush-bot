@@ -25,10 +25,6 @@ type ProtectionConfig struct{
 }
 
 type options struct{
-	//Protection specific variables
-	muteThreshold int
-	muteCallBack func(string, string, []*discordgo.Message)
-
 	protectionConfigurations []ProtectionConfig
 
 	//General variables
