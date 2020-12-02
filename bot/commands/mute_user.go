@@ -39,7 +39,7 @@ func (cmd *muteCommand) Execute(message *discordgo.Message) (string, error) {
 	}()
 
 	if !isAuthorized {
-		botLogMsg := fmt.Sprintf("<@%v> yetkisi olmayan \"**%v**\" komutunu kullanmaya çalıştı.", message.Author.ID, cmd.Name())
+		botLogMsg := fmt.Sprintf("> <@%v> yetkisi olmayan \"**%v**\" komutunu kullanmaya çalıştı.", message.Author.ID, cmd.Name())
 		_, err := cmd.session.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
 		if err != nil {
 			log.Printf("Error on writing log to bot log channel: %v", err)
@@ -49,7 +49,7 @@ func (cmd *muteCommand) Execute(message *discordgo.Message) (string, error) {
 		if err != nil {
 			log.Printf("Error on deleting command message: %v", err)
 		}
-		return fmt.Sprintf("<@%v>, bu komutu kullanma yetkiniz bulunmamaktadır.", message.Author.ID), nil
+		return fmt.Sprintf("> <@%v>, bu komutu kullanma **yetkiniz** bulunmamaktadır.", message.Author.ID), nil
 	}
 
 	if len(arguments) != 2 || len(message.Mentions) != 1 {
@@ -78,59 +78,91 @@ func (cmd *muteCommand) Execute(message *discordgo.Message) (string, error) {
 	}
 
 	mutedMember := message.Mentions[0]
-
-	err = cmd.session.GuildMemberRoleAdd(message.GuildID, mutedMember.ID, configuration.Manager.Roles.MuteRole)
+	member,err := cmd.session.GuildMember(message.GuildID, mutedMember.ID)
 	if err != nil {
-		log.Printf("Error on adding mute role to a member: %v", err)
+		log.Printf("Error on optaining member: %v", err)
 		return "", err
 	}
-	log.Printf("%v#%v muted %v#%v for %v.", message.Author.Username, message.Author.Discriminator,
-		mutedMember.Username, mutedMember.Discriminator, durationArg)
-
-	go func() {
-		time.Sleep(time.Duration(duration) * durationMultiplier)
-
-		err = cmd.session.GuildMemberRoleRemove(message.GuildID, mutedMember.ID, configuration.Manager.Roles.MuteRole)
-		if err != nil {
-			log.Printf("Error on removing muted role: %v", err)
+	isModerator := func() bool {
+		for _, role := range configuration.Manager.Roles.ModerationRoles {
+			for _, memberRole := range member.Roles {
+				if memberRole == role {
+					return true
+				}
+			}
 		}
-
-
-		botLogMsg := fmt.Sprintf("<@%v> kullanıcısının %v sürelik mute rolü kaldırıldı.", mutedMember.ID, durationArg)
-		_, err = cmd.session.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
-
-		if err != nil {
-			log.Printf("Error on writing log to bot log channel: %v", err)
-		}
-
+		return false
 	}()
+	if isModerator {
+		log.Printf("Moderators can not be muted, user: %v",member.User.Username)
+		botLogMsg := fmt.Sprintf("> <@%v>, <@%v> kullanıcısına mute rolü veremedi. sebep: **#ModeratörlerSUSTURULAMAZ**", message.Author.ID, mutedMember.ID)
+		_, err = cmd.session.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
+		if err != nil {
+			log.Printf("Error on sending log message to bot log channel: %v", err)
+		}
+	}else {
+		err = cmd.session.GuildMemberRoleAdd(message.GuildID, mutedMember.ID, configuration.Manager.Roles.MuteRole)
+		if err != nil {
+			log.Printf("Error on adding mute role to a member: %v", err)
+			return "", err
+		}
+		log.Printf("%v#%v muted %v#%v for %v.", message.Author.Username, message.Author.Discriminator,
+			mutedMember.Username, mutedMember.Discriminator, durationArg)
 
-	botLogMsg := fmt.Sprintf("<@%v>, <@%v> kullanıcısına %v mute rolü verdi.", message.Author.ID, mutedMember.ID, durationArg)
-	_, err = cmd.session.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
-	if err != nil {
-		log.Printf("Error on sending log message to bot log channel: %v", err)
+		go func() {
+			time.Sleep(time.Duration(duration) * durationMultiplier)
+
+			err = cmd.session.GuildMemberRoleRemove(message.GuildID, mutedMember.ID, configuration.Manager.Roles.MuteRole)
+			if err != nil {
+				log.Printf("Error on removing muted role: %v", err)
+			}
+
+			botLogMsg := fmt.Sprintf("> <@%v> kullanıcısının **%v** sürelik mute rolü kaldırıldı.", mutedMember.ID, durationArg)
+			_, err = cmd.session.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
+
+			if err != nil {
+				log.Printf("Error on writing log to bot log channel: %v", err)
+			}
+
+			dmChannel, err := cmd.session.UserChannelCreate(mutedMember.ID)
+			if err != nil {
+				log.Printf("Error on creating DM channel with muted user: %v", err)
+			}
+			if dmChannel == nil {
+				log.Printf("DM Channel not created")
+			}
+			_, err = cmd.session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("> Sunucuda **%v** sürelik susturulman kaldırıldı.", durationArg))
+			if err != nil {
+				log.Printf("Error sending message to member via DM Channel: %v", err)
+			}
+
+		}()
+
+		botLogMsg := fmt.Sprintf("> <@%v>, <@%v> kullanıcısına **%v** mute rolü verdi.", message.Author.ID, mutedMember.ID, durationArg)
+		_, err = cmd.session.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
+		if err != nil {
+			log.Printf("Error on sending log message to bot log channel: %v", err)
+		}
+
+		dmChannel, err := cmd.session.UserChannelCreate(mutedMember.ID)
+		if err != nil {
+			log.Printf("Error on creating DM channel with muted user: %v", err)
+			return "", nil
+		}
+
+		_, err = cmd.session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("> Sunucuda **%v** süreliğine susturuldun.", durationArg))
+		if err != nil {
+			log.Printf("Error sending message to member via DM Channel: %v", err)
+		}
 	}
-
 	err = cmd.session.ChannelMessageDelete(message.ChannelID, message.ID)
 	if err != nil {
 		log.Printf("Error on deleting command message: %v", err)
-	}
-
-	dmChannel, err := cmd.session.UserChannelCreate(mutedMember.ID)
-	if err != nil {
-		log.Printf("Error on creating DM channel with muted user: %v", err)
-		return "", nil
-	}
-
-
-	_, err = cmd.session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("Sunucuda %v süreliğine susturuldun.", durationArg))
-	if err != nil {
-		log.Printf("Error sending message to member via DM Channel: %v", err)
 	}
 
 	return "", nil
 }
 
 func (cmd *muteCommand) Usage() string{
-	return "bu komut \"!mute <kullanıcı-adı> <süre(h|m|s)>\" şeklinde kullanılır. (Moderasyon yetkisi gerektirir.)"
+	return "**bu komut,** \n\"\\>!mute `<kullanıcı-adı>` `<süre(h|m|s)>`\"\n şeklinde kullanılır. *(Moderasyon yetkisi gerektirir.)*"
 }

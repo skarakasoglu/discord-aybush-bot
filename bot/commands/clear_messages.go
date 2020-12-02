@@ -39,7 +39,7 @@ func (cmd *clearMessagesCommand) Execute(message *discordgo.Message) (string, er
 	}()
 
 	if !isAuthorized {
-		return fmt.Sprintf("<@%v>, bu komutu kullanmaya yetkiniz bulunmamaktadır.", message.Author.ID), nil
+		return fmt.Sprintf("> <@%v>, bu komutu kullanmaya yetkiniz bulunmamaktadır.", message.Author.ID), nil
 	}
 
 	if len(arguments) < 1 {
@@ -49,6 +49,7 @@ func (cmd *clearMessagesCommand) Execute(message *discordgo.Message) (string, er
 	messageCount, err := strconv.Atoi(arguments[0])
 	if err != nil {
 		log.Printf("Invalid clear command argument, expected integer: %v", err)
+		return fmt.Sprintf("<@%v>, %v", message.Author.ID, cmd.Usage()) ,nil
 	}
 
 	if messageCount >= 99 {
@@ -74,7 +75,7 @@ func (cmd *clearMessagesCommand) Execute(message *discordgo.Message) (string, er
 	}
 	log.Printf("%v#%v deleted %v messages in channel %v.", message.Author.Username, message.Author.Discriminator, messageCount, message.ChannelID)
 
-	botLogMsg := fmt.Sprintf("<@%v>, <#%v> kanalında %v adet mesaj temizledi.", message.Author.ID, message.ChannelID, messageCount)
+	botLogMsg := fmt.Sprintf("> <@%v>, <#%v> kanalında **%v** adet mesaj temizledi.", message.Author.ID, message.ChannelID, messageCount)
 	_, err = cmd.session.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
 	if err != nil {
 		log.Printf("Error on writing lot go bot log channel: %v", err)
@@ -84,5 +85,5 @@ func (cmd *clearMessagesCommand) Execute(message *discordgo.Message) (string, er
 }
 
 func (cmd *clearMessagesCommand) Usage() string{
-	return "bu komut \"!temizle <mesaj-sayısı(max: 99)>\" şeklinde kullanılır. (Moderasyon yetkisi gerektirir)"
+	return "**bu komut,** \n> !temizle `<mesaj-sayısı(max: 99)`>\n şeklinde kullanılır. *(Moderasyon yetkisi gerektirir)*"
 }
