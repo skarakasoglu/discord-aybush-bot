@@ -12,6 +12,7 @@ roles:
 
 channels:
   botLog: 782242998767058944
+  aybus: 782243045071781908
 
 presenceUpdate:
   presenceUpdateFrequency: 5000
@@ -54,3 +55,17 @@ antiSpam:
     duration: 600000
   maxInterval: 2000
   maxDuplicatesInterval: 300000
+
+loveMeter:
+  texts:
+    - Sizin aşkla alakanız yok hatta birbirinizden nefre ediyorsunuz.
+    - Bence hiç zorlamayın.
+    - Birbirinizin tipi değilsiniz.
+    - Birbirinizi tanırsanız belki.
+    - Az da olsa birbirinize karşı bişeyler hissediyorsunuz.
+    - Bence uğraşırsanız bu iş olur.
+    - Siz kesin birbirinizden hoşlanıyorsunuz.
+    - Galiba birbirinizi seviyorsunuz.
+    - Birbirinizi seviyorsunuz, bu aşk olmazsa dünya size küser.
+    - BUNA AŞK DENİR!
+    - SİZ BİRBİRİNİZE AŞIKSINIZ <3.
