@@ -18,6 +18,7 @@ type manager struct{
 	Ticket ticket
 	UrlRestriction urlRestriction
 	AntiSpam antiSpam
+	LoveMeter loveMeter
 }
 
 func ReadConfigurationFile(path string, fileName string) {
@@ -42,6 +43,7 @@ type roles struct{
 
 type channels struct{
 	BotLog string
+	Aybus string
 }
 
 type greeting struct{
@@ -78,4 +80,8 @@ type mute struct{
 	Message string
 	ChannelMessage string
 	Duration int
+}
+
+type loveMeter struct {
+	Texts []string
 }

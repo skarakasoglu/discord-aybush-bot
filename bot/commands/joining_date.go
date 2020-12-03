@@ -19,7 +19,7 @@ func NewJoiningDateCommand(session *discordgo.Session) Command{
 }
 
 func (cmd *joiningDateCommand) Name() string{
-	return "katilma-tarihi"
+	return "katılma-tarihi"
 }
 
 func (cmd *joiningDateCommand) Execute(message *discordgo.Message) (string, error) {
@@ -32,7 +32,7 @@ func (cmd *joiningDateCommand) Execute(message *discordgo.Message) (string, erro
 			return "", err
 		}
 
-		response := fmt.Sprintf("<@%v>, sunucuya katılma tarihin %v", message.Author.ID, joinedAt.Format("02 Jan 06 15:04"))
+		response := fmt.Sprintf("> <@%v>, sunucuya katılma tarihin **%v**", message.Author.ID, joinedAt.Format("02 Jan 06 15:04"))
 		return response, nil
 	}
 
@@ -48,7 +48,7 @@ func (cmd *joiningDateCommand) Execute(message *discordgo.Message) (string, erro
 	}()
 
 	if !isAuthorized {
-		return fmt.Sprintf("<@%v>, bu komutu kullanmaya yetkiniz bulunmamaktadır.", message.Author.ID), nil
+		return fmt.Sprintf("> <@%v>, bu komutu kullanmaya **yetkiniz** bulunmamaktadır.", message.Author.ID), nil
 	}
 
 	if len(message.Mentions) < 1 || len(message.Mentions) > 1 {
@@ -67,11 +67,11 @@ func (cmd *joiningDateCommand) Execute(message *discordgo.Message) (string, erro
 		return "", err
 	}
 
-	return fmt.Sprintf("<@%v>, <@%v> kullanıcısının katılma tarihi %v", message.Author.ID, member.User.ID, joinedAt.Format("02 Jan 06 15:04")), nil
+	return fmt.Sprintf("> <@%v>, <@%v> kullanıcısının katılma tarihi **%v**", message.Author.ID, member.User.ID, joinedAt.Format("02 Jan 06 15:04")), nil
 }
 
 func (cmd *joiningDateCommand) Usage() string{
-	usageType1 := "\t!katilma-tarihi"
-	usageType2 := "\t!katilma-tarihi <kullanici-adi> (Moderasyon yetkisi gerektirir)"
-	return fmt.Sprintf("bu komutu\n%v\nşekillerinde kullanabilirsiniz.", strings.Join([]string{usageType1, usageType2}, "\n"))
+	usageType1 := "\t>!katilma-tarihi"
+	usageType2 := "\t>!katilma-tarihi `<kullanici-adi>` *(Moderasyon yetkisi gerektirir)*"
+	return fmt.Sprintf("**bu komutu**\n%v\nşekillerinde kullanabilirsiniz.", strings.Join([]string{usageType1, usageType2}, "\n"))
 }

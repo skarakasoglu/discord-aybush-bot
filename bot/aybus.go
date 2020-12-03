@@ -53,6 +53,10 @@ func New(discordConnection *discordgo.Session) *Aybus{
 	muteCmd := commands.NewMuteCommand(discordConnection)
 	aybus.commands[muteCmd.Name()] = muteCmd
 
+
+	loveMtrCmd := commands.NewLoveMeterCommand(discordConnection)
+	aybus.commands[loveMtrCmd.Name()] = loveMtrCmd
+
 	return aybus
 }
 
