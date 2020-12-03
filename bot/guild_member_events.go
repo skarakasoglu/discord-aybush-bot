@@ -17,7 +17,7 @@ func (a* Aybus) onMemberJoin(session *discordgo.Session, memberAdd *discordgo.Gu
 
 	log.Printf("%v joined to %v.", memberAdd.User.Username, guild.Name)
 
-	msg := fmt.Sprintf("<@%v> %v", memberAdd.User.ID, configuration.Manager.Greeting.GreetingMessages[msgIndex])
+	msg := fmt.Sprintf("<@%v>, **Hoşgeldin.** : %v", memberAdd.User.ID, configuration.Manager.Greeting.GreetingMessages[msgIndex])
 
 	_, err = session.ChannelMessageSend(configuration.Manager.Greeting.GreetingChannel, msg)
 	if err != nil {
@@ -49,7 +49,7 @@ func (a* Aybus) onMemberLeave(session *discordgo.Session, memberLeave *discordgo
 
 	log.Printf("%v left from %v", memberLeave.User.Username, guild.Name)
 
-	botLogMsg := fmt.Sprintf("> **ID**: %v, **Kullanıcı Adı**: %v#%v sunucudan ayrıldı.",
+	botLogMsg := fmt.Sprintf("> **ID**: `%v`, **Kullanıcı Adı**: `%v#%v` sunucudan ayrıldı.",
 		memberLeave.User.ID, memberLeave.User.Username, memberLeave.User.Discriminator)
 
 	_, err = session.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
