@@ -90,7 +90,7 @@ func (a *Aybus) onURLSend(session *discordgo.Session, messageCreate *discordgo.M
 		return
 	}
 
-	msg := fmt.Sprintf("<@%v>, %v", messageCreate.Message.Author.ID, configuration.Manager.UrlRestriction.WarningMessage)
+	msg := fmt.Sprintf("> <@%v>, %v", messageCreate.Message.Author.ID, configuration.Manager.UrlRestriction.WarningMessage)
 	_, err := session.ChannelMessageSend(messageCreate.ChannelID, msg)
 	if err != nil {
 		log.Printf("Error on sending warning message to channel: %v", err)
@@ -134,7 +134,7 @@ func (a *Aybus) muteUserOnSpam(guildId string, memberId string, spamMessages []*
 			log.Printf("Error on removing muted role from member: %v", err)
 		}
 
-		botLogMsg := fmt.Sprintf("<@%v> kullanıcısının spam sebebiyle verilen %v dakikalık susturması kaldırıldı.", memberId,
+		botLogMsg := fmt.Sprintf("> <@%v> kullanıcısının **spam** sebebiyle verilen `%v` dakikalık susturması kaldırıldı.", memberId,
 			muteDurationInMutes)
 		_, err = a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
 		if err != nil {
@@ -161,10 +161,9 @@ func (a *Aybus) muteUserOnSpam(guildId string, memberId string, spamMessages []*
 		log.Printf("Error on sending mute notification message to DM channel: %v", err)
 	}
 
-	botLogMsg := fmt.Sprintf("<@%v> kullanıcısı spam sebebiyle %v dakika susturuldu.", memberId, muteDurationInMutes)
+	botLogMsg := fmt.Sprintf("> <@%v> kullanıcısı **spam** sebebiyle `%v` dakika susturuldu.", memberId, muteDurationInMutes)
 	_, err = a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
 	if err != nil {
 		log.Printf("Error on writing log to bot log channel: %v", err)
 	}
-
 }
