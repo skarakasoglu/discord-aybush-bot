@@ -49,8 +49,8 @@ type gameResult []gameElement
 var (
 	// Win conditions
 	rockScissors  = gameResult{rock, scissors}
-	rockPaper     = gameResult{paper, rock}
-	paperScissors = gameResult{scissors, paper}
+	paperRock     = gameResult{paper, rock}
+	scissorsPaper = gameResult{scissors, paper}
 
 	// Draw conditions
 	rockRock         = gameResult{rock, rock}
@@ -59,7 +59,7 @@ var (
 
 	resultPossibilities = []winner{host, away, draw}
 
-	winGame  = []gameResult{rockScissors, rockPaper, paperScissors}
+	winGame  = []gameResult{rockScissors, paperRock, scissorsPaper}
 	drawGame = []gameResult{rockRock, scissorsScissors, paperPaper}
 )
 
