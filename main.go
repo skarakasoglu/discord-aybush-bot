@@ -42,7 +42,6 @@ func main() {
 	aybusBot := bot.New(dg)
 	aybusBot.Start()
 
-
 	log.Println("AYBUŞ BOT is now running. Press CTRL + C to interrupt.")
 	signalHandler := make (chan os.Signal)
 	signal.Notify(signalHandler, os.Interrupt, os.Kill, syscall.SIGSEGV, syscall.SIGHUP)

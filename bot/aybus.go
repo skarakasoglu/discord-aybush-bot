@@ -57,6 +57,9 @@ func New(discordConnection *discordgo.Session) *Aybus{
 	loveMtrCmd := commands.NewLoveMeterCommand(discordConnection)
 	aybus.commands[loveMtrCmd.Name()] = loveMtrCmd
 
+	rockPaperScissors := commands.NewRockPaperScissorsCommand(discordConnection)
+	aybus.commands[rockPaperScissors.Name()] = rockPaperScissors
+
 	return aybus
 }
 
