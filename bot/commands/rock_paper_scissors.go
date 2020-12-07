@@ -12,6 +12,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 )
@@ -137,14 +138,38 @@ func (cmd *RockPaperScissorsCommand) Execute(message *discordgo.Message) (string
 	backgroundImage := ""
 	hostUsername := fmt.Sprintf("%v#%v", hostPlayer.Username, hostPlayer.Discriminator)
 	awayUsername := fmt.Sprintf("%v#%v", awayPlayer.Username, awayPlayer.Discriminator)
-	hostAvatar, err := cmd.session.UserAvatar(hostPlayer.ID)
+	hostAvatar, err := cmd.session.UserAvatarDecode(hostPlayer)
 	if err != nil {
 		log.Printf("Error on obtaining host player avatar: %v", err)
+		file, err := os.Open(fmt.Sprintf("%v/%v", configuration.Manager.BaseImagePath,
+			configuration.Manager.RockPaperScissors.DefaultAvatar))
+		if err != nil {
+			log.Printf("Error on opening default discord avatar file: %v", err)
+			return "", err
+		}
+
+		hostAvatar, _, err = image.Decode(file)
+		if err != nil {
+			log.Printf("Error on decoding image file: %v", err)
+			return "", err
+		}
 	}
 
-	awayAvatar, err := cmd.session.UserAvatar(awayPlayer.ID)
+	awayAvatar, err := cmd.session.UserAvatarDecode(awayPlayer)
 	if err != nil {
 		log.Printf("Error on obtaining away player avatar: %v", err)
+		file, err := os.Open(fmt.Sprintf("%v/%v", configuration.Manager.BaseImagePath,
+			configuration.Manager.RockPaperScissors.DefaultAvatar))
+		if err != nil {
+			log.Printf("Error on opening default discord avatar file: %v", err)
+			return "", err
+		}
+
+		awayAvatar, _, err = image.Decode(file)
+		if err != nil {
+			log.Printf("Error on decoding image file: %v", err)
+			return "", err
+		}
 	}
 
 	var winner winner

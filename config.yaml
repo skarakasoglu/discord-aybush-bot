@@ -78,6 +78,7 @@ loveMeter:
     - SİZ BİRBİRİNİZE AŞIKSINIZ <3.
 
 rockPaperScissors:
-    hostWins: backgroundHostWins.png
-    awayWins: backgroundAwayWins.png
-    draw: backgroundDraw.png
+  defaultAvatar: discord.jpg
+  hostWins: backgroundHostWins.png
+  awayWins: backgroundAwayWins.png
+  draw: backgroundDraw.png

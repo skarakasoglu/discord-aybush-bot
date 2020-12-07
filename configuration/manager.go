@@ -96,6 +96,7 @@ type loveMeter struct {
 }
 
 type rockPaperScissors struct{
+	DefaultAvatar string
 	HostWins string
 	AwayWins string
 	Draw string
