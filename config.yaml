@@ -2,6 +2,11 @@
 botUserId: 607906445480034304
 baseImagePath: images
 
+#Twitch webhook api settings
+twitchApi:
+  address: 0.0.0.0
+  port: 8080
+
 #Role groups
 roles:
   defaultMemberRole: 782242269834641409
@@ -14,6 +19,7 @@ roles:
 channels:
   botLog: 782242998767058944
   aybus: 782243045071781908
+  sohbet: 782242136731942945
 
 presenceUpdate:
   presenceUpdateFrequency: 5000
