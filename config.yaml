@@ -1,5 +1,6 @@
 #Bot's own user id for ignoring it in some cases.
 botUserId: 607906445480034304
+baseImagePath: images
 
 #Role groups
 roles:
@@ -69,3 +70,8 @@ loveMeter:
     - Birbirinizi seviyorsunuz, bu aşk olmazsa dünya size küser.
     - BUNA AŞK DENİR!
     - SİZ BİRBİRİNİZE AŞIKSINIZ <3.
+
+rockPaperScissors:
+    hostWins: backgroundHostWins.png
+    awayWins: backgroundAwayWins.png
+    draw: backgroundDraw.png

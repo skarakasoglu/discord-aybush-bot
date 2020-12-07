@@ -11,6 +11,7 @@ var (
 
 type manager struct{
 	BotRoleId string
+	BaseImagePath string
 	Roles roles
 	Channels channels
 	PresenceUpdate presenceUpdate
@@ -19,6 +20,7 @@ type manager struct{
 	UrlRestriction urlRestriction
 	AntiSpam antiSpam
 	LoveMeter loveMeter
+	RockPaperScissors rockPaperScissors
 }
 
 func ReadConfigurationFile(path string, fileName string) {
@@ -84,4 +86,10 @@ type mute struct{
 
 type loveMeter struct {
 	Texts []string
+}
+
+type rockPaperScissors struct{
+	HostWins string
+	AwayWins string
+	Draw string
 }
