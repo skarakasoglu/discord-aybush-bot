@@ -1,12 +1,17 @@
 package bot
 
 import (
+	"fmt"
 	"github.com/bwmarrin/discordgo"
+	embed "github.com/clinet/discordgo-embed"
 	"github.com/skarakasoglu/discord-aybush-bot/bot/antispam"
 	"github.com/skarakasoglu/discord-aybush-bot/bot/commands"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
+	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
+	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -26,11 +31,17 @@ type Aybus struct{
 
 	antiSpam antispam.AntiSpam
 	commands map[string]commands.Command
+
+	userFollowsChan <-chan payloads.UserFollows
+	streamChangedChan <-chan messages.StreamChanged
 }
 
-func New(discordConnection *discordgo.Session) *Aybus{
+func New(discordConnection *discordgo.Session,
+	userFollowChan <-chan payloads.UserFollows, streamChangedChan <-chan messages.StreamChanged) *Aybus{
 	aybus := &Aybus{
 		discordConnection: discordConnection,
+		userFollowsChan: userFollowChan,
+		streamChangedChan: streamChangedChan,
 	}
 
 	antiSpamConfiguration := configuration.Manager.AntiSpam
@@ -76,6 +87,8 @@ func (a* Aybus) Start() {
 	a.discordConnection.AddHandler(a.onSpamCheck)
 
 	go a.updatePresence()
+	go a.receiveStreamChanges()
+	go a.receiveUserFollows()
 }
 
 func (a* Aybus) Stop() {
@@ -100,6 +113,67 @@ func (a *Aybus) updatePresence() {
 			}
 
 			time.Sleep(time.Millisecond * time.Duration(configuration.Manager.PresenceUpdate.PresenceUpdateFrequency))
+		}
+	}
+}
+
+func (a *Aybus) receiveStreamChanges() {
+	for a.IsRunning() {
+		for streamChange := range a.streamChangedChan {
+			log.Printf("Stream changed event received: %v", streamChange)
+
+			twitchUrl := fmt.Sprintf("https://twitch.tv/%v", streamChange.Username)
+
+			embedMsg := embed.NewGenericEmbed(streamChange.Title, "")
+			embedMsg.URL = twitchUrl
+
+			thumbnail := strings.Replace(
+				strings.Replace(streamChange.ThumbnailURL, "{width}", "300", 1),
+				"{height}", "169", 1)
+
+			embedMsg.Author = &discordgo.MessageEmbedAuthor{Name: streamChange.Username, IconURL: streamChange.AvatarURL}
+			embedMsg.Thumbnail = &discordgo.MessageEmbedThumbnail{
+				URL: streamChange.AvatarURL,
+			}
+			embedMsg.Color = int(0x6441A4)
+
+			gameField := &discordgo.MessageEmbedField{
+				Name:   "Game",
+				Value:  streamChange.GameName,
+				Inline: true,
+			}
+			viewerField := &discordgo.MessageEmbedField{
+				Name:   "Viewers",
+				Value:  fmt.Sprintf("%v", streamChange.ViewerCount),
+				Inline: true,
+			}
+
+			embedMsg.Fields = []*discordgo.MessageEmbedField{gameField, viewerField}
+			embedMsg.Image = &discordgo.MessageEmbedImage{
+				URL:      thumbnail,
+			}
+
+			_, err := a.discordConnection.ChannelMessageSendComplex(configuration.Manager.Channels.Sohbet, &discordgo.MessageSend{
+				Embed: embedMsg,
+				Content: fmt.Sprintf("@everyone, %v yayında! Aybusee'dekiler kan kardeşler.", twitchUrl),
+			})
+			if err != nil {
+				log.Printf("Error on sending embed message to chat channel: %v", err)
+			}
+		}
+	}
+}
+
+func (a *Aybus) receiveUserFollows() {
+	for a.IsRunning() {
+		for userFollows := range a.userFollowsChan {
+			log.Printf("User follows event received: %v", userFollows)
+			_, err := a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog,
+				fmt.Sprintf("%v aybusee'yi %v tarihinde takip etti.", userFollows.FromName,
+					userFollows.FollowedAt.Format(time.Stamp)))
+			if err != nil {
+				log.Printf("Error on writing to bot log channel: %v", err)
+			}
 		}
 	}
 }

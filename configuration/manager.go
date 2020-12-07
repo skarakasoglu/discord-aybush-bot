@@ -13,6 +13,7 @@ type manager struct{
 	BotRoleId string
 	BaseImagePath string
 	Roles roles
+	TwitchApi twitchApi
 	Channels channels
 	PresenceUpdate presenceUpdate
 	Greeting greeting
@@ -43,9 +44,15 @@ type roles struct{
 	ModerationRoles []string
 }
 
+type twitchApi struct{
+	Address string
+	Port int
+}
+
 type channels struct{
 	BotLog string
 	Aybus string
+	Sohbet string
 }
 
 type greeting struct{
