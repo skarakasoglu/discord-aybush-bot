@@ -9,6 +9,10 @@ import (
 	"net/http"
 )
 
+var (
+	hubSecret string
+)
+
 type webhookRequest struct{
 	Callback string `json:"hub.callback"`
 	Mode string `json:"hub.mode"`
@@ -23,7 +27,7 @@ func (man *Manager) subscribeToStreamChangedEvent(userID string, leaseSeconds in
 		Mode:         "subscribe",
 		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/streams?user_id=%v", userID),
 		LeaseSeconds: leaseSeconds,
-		Secret:       "aybush",
+		Secret:       hubSecret,
 	}
 	man.makeWebhookRequest(webhookReq)
 }
@@ -34,7 +38,7 @@ func (man *Manager) unsubscribeFromStreamChangedEvent(userID string, leaseSecond
 		Mode:         "unsubscribe",
 		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/streams?user_id=%v", userID),
 		LeaseSeconds: leaseSeconds,
-		Secret:       "aybush",
+		Secret:       hubSecret,
 	}
 	man.makeWebhookRequest(webhookReq)
 }
@@ -45,7 +49,7 @@ func (man *Manager) subscribeToUserFollowsEvent(userID string, leaseSeconds int)
 		Mode:         "subscribe",
 		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/users/follows?first=1&to_id=%v", userID),
 		LeaseSeconds: leaseSeconds,
-		Secret:       "aybush",
+		Secret:       hubSecret,
 	}
 	man.makeWebhookRequest(webhookReq)
 }

@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	BASE_API_URL = "http://176.53.90.209:8000/api/twitch"
+	BASE_API_URL = ""
 	DEFAULT_API_VER = "v1"
 	userID = "176613744"
 	leaseSeconds = 864000
@@ -29,7 +29,10 @@ type Manager struct{
 
 func NewManager(oauthToken string, clientID string,
 	userFollowsChan chan<- payloads.UserFollows,
-	streamChangedChan chan<- messages.StreamChanged) *Manager{
+	streamChangedChan chan<- messages.StreamChanged, hubSecretP string, baseApiURL string) *Manager{
+	hubSecret = hubSecretP
+	BASE_API_URL = fmt.Sprintf("http://%v/api/twitch", baseApiURL)
+
 	return &Manager{
 		oauthToken: oauthToken,
 		clientId: clientID,

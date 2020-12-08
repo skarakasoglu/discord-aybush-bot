@@ -1,9 +1,15 @@
 package twitch
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
+	"io/ioutil"
 	"log"
 	"net/http"
 )
@@ -43,10 +49,25 @@ func (api *apiV1) onSubscriptionValidated(ctx *gin.Context) {
 }
 
 func (api *apiV1) onStreamChanged(ctx *gin.Context) {
+	buffer, err := ioutil.ReadAll(ctx.Request.Body)
+	if err != nil {
+		log.Printf("Error on reading request body: %v", err)
+		return
+	}
+
 	var streamChangePayload payloads.StreamChangedPayload
-	err := ctx.BindJSON(&streamChangePayload)
+	err = json.Unmarshal(buffer, &streamChangePayload)
 	if err != nil {
 		log.Printf("Error on binding to request json: %v", err)
+		return
+	}
+
+	signature := ctx.GetHeader("X-Hub-Signature")
+	valid, signatureShouldBe := api.validateSignature(signature, buffer)
+	if !valid{
+		log.Printf("The payload signature is not valid. Unauthenticated request, signature: %v, signatureShouldBe: %v",
+			signature, signatureShouldBe)
+		ctx.String(http.StatusOK, "")
 		return
 	}
 
@@ -84,10 +105,25 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 }
 
 func (api *apiV1) onUserFollows(ctx *gin.Context) {
+	buffer, err := ioutil.ReadAll(ctx.Request.Body)
+	if err != nil {
+		log.Printf("Error on reading request body: %v", err)
+		return
+	}
+
 	var followPayload payloads.UserFollowsPayload
-	err := ctx.BindJSON(&followPayload)
+	err = json.Unmarshal(buffer, &followPayload)
 	if err != nil {
 		log.Printf("Error on binding to request json: %v", err)
+		return
+	}
+
+	signature := ctx.GetHeader("X-Hub-Signature")
+	valid, signatureShouldBe := api.validateSignature(signature, buffer)
+	if !valid{
+		log.Printf("The payload signature is not valid. Unauthenticated request, signature: %v, signatureShouldBe: %v",
+			signature, signatureShouldBe)
+		ctx.String(http.StatusOK, "")
 		return
 	}
 
@@ -107,4 +143,12 @@ func (api *apiV1) onUserFollows(ctx *gin.Context) {
 	}
 
 	ctx.String(http.StatusOK, "")
+}
+
+func (api *apiV1) validateSignature(signature string, payload []byte) (bool, string) {
+	h := hmac.New(sha256.New, []byte(hubSecret))
+	h.Write(payload)
+	signatureShouldBe := fmt.Sprintf("sha256=%v", hex.EncodeToString(h.Sum(nil)))
+
+	return signatureShouldBe == signature, signatureShouldBe
 }
