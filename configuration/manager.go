@@ -10,7 +10,7 @@ var (
 )
 
 type manager struct{
-	BotRoleId string
+	BotUserId string
 	BaseImagePath string
 	Roles roles
 	TwitchApi twitchApi

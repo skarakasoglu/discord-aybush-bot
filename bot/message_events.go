@@ -3,6 +3,7 @@ package bot
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	embed "github.com/clinet/discordgo-embed"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"log"
 	"mvdan.cc/xurls"
@@ -161,8 +162,47 @@ func (a *Aybus) muteUserOnSpam(guildId string, memberId string, spamMessages []*
 		log.Printf("Error on sending mute notification message to DM channel: %v", err)
 	}
 
-	botLogMsg := fmt.Sprintf("> <@%v> kullanıcısı **spam** sebebiyle `%v` dakika susturuldu.", memberId, muteDurationInMutes)
-	_, err = a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
+
+
+	botLogEmbedMsg := embed.NewGenericEmbed("Moderasyon İşlemi", "")
+	botLogEmbedMsg.Color = 0xF97100
+	botLogEmbedMsg.Fields = []*discordgo.MessageEmbedField{
+		{
+			Name:   "İşlem",
+			Value:  "Susturma",
+			Inline: true,
+		},
+		{
+			Name:   "Uygulanan Kişi",
+			Value:  fmt.Sprintf("<@%v>", memberId),
+			Inline: true,
+		},
+		{
+			Name:   "Kanal",
+			Value:  fmt.Sprintf("<#%v>", lastChannelId),
+			Inline: true,
+		},
+		{
+			Name:   "Uygulayan",
+			Value:  fmt.Sprintf("<@%v>", configuration.Manager.BotUserId),
+			Inline: true,
+		},
+		{
+			Name: "Sebep",
+			Value: "Spam",
+			Inline: true,
+		},
+		{
+			Name:   "Süre",
+			Value:  fmt.Sprintf("%vm", muteDurationInMutes),
+			Inline: false,
+		},
+	}
+	botLogEmbedMsg.Footer = &discordgo.MessageEmbedFooter{
+		Text:         time.Now().Format(time.Stamp),
+	}
+
+	_, err = a.discordConnection.ChannelMessageSendEmbed(configuration.Manager.Channels.BotLog, botLogEmbedMsg)
 	if err != nil {
 		log.Printf("Error on writing log to bot log channel: %v", err)
 	}
