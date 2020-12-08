@@ -25,7 +25,7 @@ USER aybush
 # is going to be used with twitch webhooks.
 EXPOSE 8000:8080
 
-ENV applicationMode Debug
+ENV applicationMode Release
 ENV applicationName "Discord Aybush Bot"
 ENV executablePath bin
 ENV executableName DiscordAybushBot
