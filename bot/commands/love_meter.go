@@ -33,6 +33,8 @@ func (cmd *loveMeterCommand) Name() string{
 
 func (cmd *loveMeterCommand) Execute(message *discordgo.Message) (string, error){
 	if message.ChannelID != configuration.Manager.Channels.Aybus{
+		log.Printf("%v command is received in wrong channel. User: %v#%v, channel: %v", cmd.Name(),
+			message.Author.Username, message.Author.Discriminator, message.ChannelID) 
 		return "", nil
 	}
 

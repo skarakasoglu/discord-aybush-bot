@@ -122,6 +122,12 @@ func (cmd *RockPaperScissorsCommand) Name() string {
 }
 
 func (cmd *RockPaperScissorsCommand) Execute(message *discordgo.Message) (string, error) {
+	if message.ChannelID != configuration.Manager.Channels.Aybus {
+		log.Printf("%v command is received in wrong channel. User: %v#%v, channel: %v", cmd.Name(),
+			message.Author.Username, message.Author.Discriminator, message.ChannelID)
+		return "", nil
+	}
+
 	arguments := strings.Split(message.Content, " ")[1:]
 
 	if len(arguments) < 1 || len(message.Mentions) != 1 {
