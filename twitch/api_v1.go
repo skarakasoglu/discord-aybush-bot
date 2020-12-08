@@ -74,7 +74,7 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 				AvatarURL:    streamer.ThumbnailURL,
 				ThumbnailURL: streamChangeInfo.ThumbnailUrl,
 				ViewerCount:  streamChangeInfo.ViewerCount,
-				StartedAt:    streamChangeInfo.StartedAt,
+				StartedAt:    streamChangeInfo.StartedAt.Local(),
 			}
 
 			api.streamChangedChan <- streamChanged
