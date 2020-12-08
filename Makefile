@@ -1,6 +1,6 @@
 build:
 	echo "Building ${applicationName}..."
-	go build -o bin/DiscordAybushBot main.go
+	go build -o ${executablePath}/${executableName} main.go
 
 run:
 	echo "Running ${applicationName} in ${applicationMode} mode..."

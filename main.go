@@ -57,9 +57,12 @@ func main() {
 
 	log.Println("AYBUŞ BOT is now running. Press CTRL + C to interrupt.")
 	signalHandler := make (chan os.Signal)
-	signal.Notify(signalHandler, os.Interrupt, os.Kill, syscall.SIGSEGV, syscall.SIGHUP)
+	signal.Notify(signalHandler, os.Interrupt, os.Kill, syscall.SIGUSR1, syscall.SIGTERM)
 	receivedSignal := <-signalHandler
 
 	log.Printf("%v signal received. Gracefully shutting down the application.", receivedSignal)
 	aybusBot.Stop()
+	twitchWebhookManager.Stop()
+
+	log.Printf("Application exited.")
 }

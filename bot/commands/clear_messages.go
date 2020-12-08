@@ -3,10 +3,12 @@ package commands
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	embed "github.com/clinet/discordgo-embed"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"log"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type clearMessagesCommand struct{
@@ -75,8 +77,35 @@ func (cmd *clearMessagesCommand) Execute(message *discordgo.Message) (string, er
 	}
 	log.Printf("%v#%v deleted %v messages in channel %v.", message.Author.Username, message.Author.Discriminator, messageCount, message.ChannelID)
 
-	botLogMsg := fmt.Sprintf("> <@%v>, <#%v> kanalında **%v** adet mesaj temizledi.", message.Author.ID, message.ChannelID, messageCount)
-	_, err = cmd.session.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
+	embedBotLogMsg := embed.NewGenericEmbed("Moderasyon İşlemi", "")
+	embedBotLogMsg.Color = 0xF97100
+	embedBotLogMsg.Fields = []*discordgo.MessageEmbedField{
+		{
+			Name:   "İşlem",
+			Value:  "Temizle",
+			Inline: true,
+		},
+		{
+			Name:   "Kanal",
+			Value:  fmt.Sprintf("<#%v>", message.ChannelID),
+			Inline: true,
+		},
+		{
+			Name: "Uygulayan",
+			Value: fmt.Sprintf("<@%v>", message.Author.ID),
+			Inline: false,
+		},
+		{
+			Name: "Adet",
+			Value: fmt.Sprintf("%v", messageCount),
+			Inline: false,
+		},
+	}
+	embedBotLogMsg.Footer = &discordgo.MessageEmbedFooter{
+		Text:         time.Now().Format(time.Stamp),
+	}
+
+	_, err = cmd.session.ChannelMessageSendEmbed(configuration.Manager.Channels.BotLog, embedBotLogMsg)
 	if err != nil {
 		log.Printf("Error on writing lot go bot log channel: %v", err)
 	}
