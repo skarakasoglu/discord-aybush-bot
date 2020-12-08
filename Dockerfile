@@ -20,6 +20,7 @@ ADD --chown=aybush:aybush . /go/src/github.com/skarakasoglu/discord-aybush-bot/
 
 #Give the owner to execute the run.sh shell script.
 RUN chmod 744 run.sh
+RUN chown aybush:aybush /go/src/github.com/skarakasoglu/discord-aybush-bot/ && chmod 744 run.sh
 
 # is going to be used with twitch webhooks.
 EXPOSE 8080:8080
