@@ -81,6 +81,7 @@ type antiSpam struct{
 	Mute mute
 	MaxInterval int
 	MaxDuplicatesInterval int
+	IgnoredChannels []string
 }
 
 type mute struct{

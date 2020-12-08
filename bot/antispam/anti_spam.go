@@ -43,13 +43,14 @@ type AntiSpam struct{
 }
 
 func NewAntiSpam(maxInterval int, maxDuplicatesInterval int,
-	exemptRoles []string, ignoredUsers []string) AntiSpam {
+	exemptRoles []string, ignoredUsers []string, ignoredChannels []string) AntiSpam {
 	return AntiSpam{
 		options: options{
 			maxInterval:      maxInterval,
 			maxDuplicatesInterval: maxDuplicatesInterval,
 			exemptRoles:      exemptRoles,
 			ignoredUsers:     ignoredUsers,
+			ignoredChannels: ignoredChannels,
 		},
 		cachedMessages: make(map[string]guildMessages),
 	}

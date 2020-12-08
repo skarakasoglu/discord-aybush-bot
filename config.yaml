@@ -54,9 +54,11 @@ ticket:
 
 #Spam protection configurations
 antiSpam:
+  ignoredChannels:
+    - 785814685961158686
   mute:
-    threshold: 5
-    maxDuplicates: 3
+    threshold: 4
+    maxDuplicates: 8
     message: "Spam yaptığın için %v dakika susturuldun. Bu davranışına devam edersen sunucudan atılabilirsin."
     channelMessage: "<@%v> spam sebebiyle %v dakika susturuldu."
     duration: 600000

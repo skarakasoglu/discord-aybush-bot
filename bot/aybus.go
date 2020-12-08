@@ -46,7 +46,7 @@ func New(discordConnection *discordgo.Session,
 
 	antiSpamConfiguration := configuration.Manager.AntiSpam
 	aybus.antiSpam = antispam.NewAntiSpam(antiSpamConfiguration.MaxInterval, antiSpamConfiguration.MaxDuplicatesInterval,
-		configuration.Manager.Roles.ModerationRoles, []string{configuration.Manager.BotRoleId})
+		configuration.Manager.Roles.ModerationRoles, []string{configuration.Manager.BotUserId}, configuration.Manager.AntiSpam.IgnoredChannels)
 	aybus.antiSpam.AddProtectionConfig(antispam.ProtectionConfig{
 		Threshold:     antiSpamConfiguration.Mute.Threshold,
 		MaxDuplicates: antiSpamConfiguration.Mute.MaxDuplicates,
