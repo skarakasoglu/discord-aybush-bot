@@ -50,7 +50,6 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 		return
 	}
 
-
 	notificationId := ctx.GetHeader("Twitch-Notification-Id")
 	_, ok := api.receivedNotifications[notificationId]
 	if ok {

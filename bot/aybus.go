@@ -138,12 +138,12 @@ func (a *Aybus) receiveStreamChanges() {
 			embedMsg.Color = int(0x6441A4)
 
 			gameField := &discordgo.MessageEmbedField{
-				Name:   "Game",
+				Name:   "Oyun",
 				Value:  streamChange.GameName,
 				Inline: true,
 			}
 			viewerField := &discordgo.MessageEmbedField{
-				Name:   "Viewers",
+				Name:   "İzleyiciler",
 				Value:  fmt.Sprintf("%v", streamChange.ViewerCount),
 				Inline: true,
 			}
@@ -169,7 +169,7 @@ func (a *Aybus) receiveUserFollows() {
 		for userFollows := range a.userFollowsChan {
 			log.Printf("User follows event received: %v", userFollows)
 			_, err := a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog,
-				fmt.Sprintf("%v aybusee'yi %v tarihinde takip etti.", userFollows.FromName,
+				fmt.Sprintf("> **%v** **aybusee**'yi %v tarihinde takip etti.", userFollows.FromName,
 					userFollows.FollowedAt.Local().Format(time.Stamp)))
 			if err != nil {
 				log.Printf("Error on writing to bot log channel: %v", err)
