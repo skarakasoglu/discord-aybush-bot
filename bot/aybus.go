@@ -169,7 +169,7 @@ func (a *Aybus) receiveUserFollows() {
 		for userFollows := range a.userFollowsChan {
 			log.Printf("User follows event received: %v", userFollows)
 			_, err := a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog,
-				fmt.Sprintf("> **%v** **aybusee**'yi %v tarihinde takip etti.", userFollows.FromName,
+				fmt.Sprintf("> **%v** aybusee'yi **%v** tarihinde takip etti.", userFollows.FromName,
 					userFollows.FollowedAt.Local().Format(time.Stamp)))
 			if err != nil {
 				log.Printf("Error on writing to bot log channel: %v", err)
