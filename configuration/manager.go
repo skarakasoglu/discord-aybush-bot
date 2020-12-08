@@ -10,11 +10,18 @@ var (
 )
 
 type manager struct{
+	BotUserId string
+	BaseImagePath string
 	Roles roles
+	TwitchApi twitchApi
 	Channels channels
 	PresenceUpdate presenceUpdate
 	Greeting greeting
 	Ticket ticket
+	UrlRestriction urlRestriction
+	AntiSpam antiSpam
+	LoveMeter loveMeter
+	RockPaperScissors rockPaperScissors
 }
 
 func ReadConfigurationFile(path string, fileName string) {
@@ -33,10 +40,19 @@ func ReadConfigurationFile(path string, fileName string) {
 
 type roles struct{
 	DefaultMemberRole string
+	MuteRole string
+	ModerationRoles []string
+}
+
+type twitchApi struct{
+	Address string
+	Port int
 }
 
 type channels struct{
 	BotLog string
+	Aybus string
+	Sohbet string
 }
 
 type greeting struct{
@@ -50,8 +66,39 @@ type presenceUpdate struct{
 	Statuses []string
 }
 
+type urlRestriction struct{
+	WarningMessage string
+	RestrictedChannels []string
+}
+
 type ticket struct{
 	MessageId string
 	Reaction string
 	RoleId string
+}
+
+type antiSpam struct{
+	Mute mute
+	MaxInterval int
+	MaxDuplicatesInterval int
+	IgnoredChannels []string
+}
+
+type mute struct{
+	Threshold int
+	MaxDuplicates int
+	Message string
+	ChannelMessage string
+	Duration int
+}
+
+type loveMeter struct {
+	Texts []string
+}
+
+type rockPaperScissors struct{
+	DefaultAvatar string
+	HostWins string
+	AwayWins string
+	Draw string
 }
