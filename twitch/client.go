@@ -15,6 +15,8 @@ import (
 var (
 	BASE_API_URL = "http://176.53.90.209:8080/api/twitch"
 	DEFAULT_API_VER = "v1"
+	userID = "176613744"
+	leaseSeconds = 864000
 )
 
 type Manager struct{
@@ -56,8 +58,6 @@ func (man *Manager) Start() error {
 
 
 	time.Sleep(time.Duration(2) * time.Second)
-	userID := "176613744"
-	leaseSeconds := 864000
 	go func(userID string, leaseSeconds int) {
 		for man.running {
 			man.subscribeToStreamChangedEvent(userID, leaseSeconds)
@@ -72,6 +72,10 @@ func (man *Manager) Start() error {
 
 func (man *Manager) Stop() {
 	man.running = false
+	man.unsubscribeFromStreamChangedEvent(userID, leaseSeconds)
+	man.unsubscribeFromUserFollowsEvent(userID, leaseSeconds)
+	// Wait for receiving unsubscribe request from twitch API.
+	time.Sleep(time.Duration(5) * time.Second)
 }
 
 func (man *Manager) getStreamerByUsername(username string) payloads.Streamer {

@@ -28,10 +28,32 @@ func (man *Manager) subscribeToStreamChangedEvent(userID string, leaseSeconds in
 	man.makeWebhookRequest(webhookReq)
 }
 
+func (man *Manager) unsubscribeFromStreamChangedEvent(userID string, leaseSeconds int) {
+	webhookReq := webhookRequest{
+		Callback:     fmt.Sprintf("%v/%v/streams", BASE_API_URL, DEFAULT_API_VER),
+		Mode:         "unsubscribe",
+		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/streams?user_id=%v", userID),
+		LeaseSeconds: leaseSeconds,
+		Secret:       "aybush",
+	}
+	man.makeWebhookRequest(webhookReq)
+}
+
 func (man *Manager) subscribeToUserFollowsEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
 		Callback:     fmt.Sprintf("%v/%v/follows", BASE_API_URL, DEFAULT_API_VER),
 		Mode:         "subscribe",
+		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/users/follows?first=1&to_id=%v", userID),
+		LeaseSeconds: leaseSeconds,
+		Secret:       "aybush",
+	}
+	man.makeWebhookRequest(webhookReq)
+}
+
+func (man *Manager) unsubscribeFromUserFollowsEvent(userID string, leaseSeconds int) {
+	webhookReq := webhookRequest{
+		Callback:     fmt.Sprintf("%v/%v/follows", BASE_API_URL, DEFAULT_API_VER),
+		Mode:         "unsubscribe",
 		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/users/follows?first=1&to_id=%v", userID),
 		LeaseSeconds: leaseSeconds,
 		Secret:       "aybush",
