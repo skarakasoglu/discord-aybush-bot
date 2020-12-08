@@ -11,16 +11,16 @@ RUN go get -u github.com/bwmarrin/discordgo && go get -u github.com/clinet/disco
 
 #Create group and user named aybush, do not create home directory, do not assign password to user.
 RUN groupadd aybush && useradd -m -g aybush aybush
-#Log in as aybush.
-USER aybush
 
 WORKDIR /go/src/github.com/skarakasoglu/discord-aybush-bot/
 #Change owner and group of files as aybush.
 ADD --chown=aybush:aybush . /go/src/github.com/skarakasoglu/discord-aybush-bot/
 
 #Give the owner to execute the run.sh shell script.
-RUN chmod 744 run.sh
 RUN chown aybush:aybush /go/src/github.com/skarakasoglu/discord-aybush-bot/ && chmod 744 run.sh
+
+#Log in as aybush.
+USER aybush
 
 # is going to be used with twitch webhooks.
 EXPOSE 8080:8080
