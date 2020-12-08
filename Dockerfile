@@ -5,6 +5,9 @@ RUN go get -u github.com/bwmarrin/discordgo && go get -u github.com/clinet/disco
     go get -u github.com/gin-gonic/gin && go get -u github.com/spf13/viper && \
     go get -u mvdan.cc/xurls
 
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+ENV TZ Asia/Istanbul
+
 WORKDIR /go/src/github.com/skarakasoglu/discord-aybush-bot/
 ADD . /go/src/github.com/skarakasoglu/discord-aybush-bot/
 
