@@ -4,6 +4,7 @@ build:
 
 run:
 	echo "Running ${applicationName} in ${applicationMode} mode..."
-	bin/DiscordAybushBot --discord-token ${discordAccessToken} --twitch-token ${twitchAccessToken} --twitch-client-id ${twitchClientId}
+	bin/DiscordAybushBot --discord-token ${discordAccessToken} --twitch-token ${twitchAccessToken} --twitch-client-id ${twitchClientId} \
+		--hub-secret ${webhookHubSecret} --base-api-address ${baseApiAddress}
 
 all: build run

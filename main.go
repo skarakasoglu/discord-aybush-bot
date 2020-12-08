@@ -21,6 +21,8 @@ var (
 	discordAccessToken string
 	twitchAccessToken string
 	twitchClientId string
+	hubSecret string
+	baseApiAddress string
 )
 
 func init() {
@@ -29,6 +31,8 @@ func init() {
 	flag.StringVar(&configurationFilePath, "cfg-file-path", ".", "application configuration file path")
 	flag.StringVar(&twitchAccessToken, "twitch-token", "", "twitch api oauth token")
 	flag.StringVar(&twitchClientId, "twitch-client-id", "", "twitch api client id")
+	flag.StringVar(&hubSecret, "hub-secret", "", "twitch webhook api secret")
+	flag.StringVar(&baseApiAddress, "base-api-address", "", "twitch webhook api server address")
 	flag.Parse()
 
 	configuration.ReadConfigurationFile(configurationFilePath, configurationFileName)
@@ -52,7 +56,7 @@ func main() {
 	aybusBot := bot.New(dg, userFollowChan, streamChangedChan)
 	aybusBot.Start()
 
-	twitchWebhookManager := twitch.NewManager(twitchAccessToken, twitchClientId, userFollowChan, streamChangedChan)
+	twitchWebhookManager := twitch.NewManager(twitchAccessToken, twitchClientId, userFollowChan, streamChangedChan, hubSecret, baseApiAddress)
 	err = twitchWebhookManager.Start()
 
 	log.Println("AYBUŞ BOT is now running. Press CTRL + C to interrupt.")

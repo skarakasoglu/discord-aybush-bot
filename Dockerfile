@@ -23,14 +23,16 @@ RUN chown aybush:aybush /go/src/github.com/skarakasoglu/discord-aybush-bot/ && c
 USER aybush
 
 # is going to be used with twitch webhooks.
-EXPOSE 8080:8080
+EXPOSE 8000:8080
 
 ENV applicationMode Debug
 ENV applicationName "Discord Aybush Bot"
 ENV executablePath bin
 ENV executableName DiscordAybushBot
+ENV baseApiAddress 1.2.3.4:5678
 ENV discordAccessToken example_discord_access_token
 ENV twitchAccessToken example_twitch_access_token
 ENV twitchClientId example_twitch_client_id
+ENV webhookHubSecret very_secret
 
 CMD ["/bin/bash", "-c", "./run.sh"]
