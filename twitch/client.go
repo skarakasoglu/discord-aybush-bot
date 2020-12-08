@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	BASE_API_URL = "http://176.53.90.209:8080/api/twitch"
+	BASE_API_URL = "http://176.53.90.209:8000/api/twitch"
 	DEFAULT_API_VER = "v1"
 )
 
