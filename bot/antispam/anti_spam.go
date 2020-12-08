@@ -37,8 +37,6 @@ type options struct{
 
 type AntiSpam struct{
 	options
-
-	guildMessagesMtx sync.Mutex
 	cachedMessages map[string]guildMessages
 }
 
@@ -85,14 +83,14 @@ func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
 	go func() {
 		time.Sleep(time.Duration(MAX_CACHE_DURATION) * time.Second)
 
+		memberMessages.messageMtx.Lock()
 		for i, val := range memberMessages.messages {
 			if val == message {
-				memberMessages.messageMtx.Lock()
 				memberMessages.messages = append(memberMessages.messages[:i], memberMessages.messages[i + 1:]...)
-				memberMessages.messageMtx.Unlock()
 				break
 			}
 		}
+		memberMessages.messageMtx.Unlock()
 	}()
 
 	for _, protection := range antiSpam.protectionConfigurations {
@@ -100,6 +98,13 @@ func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
 		var duplicateMatches []*discordgo.Message
 
 		memberMessages.messageMtx.Lock()
+
+		lastMessageTime, err := message.Timestamp.Parse()
+		if err != nil {
+			log.Printf("Error on parsing timestamp data for last message: %v", err)
+			lastMessageTime = time.Now()
+		}
+
 		for _, memberMessage := range memberMessages.messages {
 			sentTime, err := memberMessage.Timestamp.Parse()
 			if err != nil {
@@ -107,7 +112,10 @@ func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
 				continue
 			}
 
-			if (time.Now().UnixNano() / int64(time.Millisecond)) - (sentTime.UnixNano() / int64(time.Millisecond)) <  int64(antiSpam.maxInterval) {
+			lastMessageMilli := lastMessageTime.UnixNano() / int64(time.Millisecond)
+			sentMilli := sentTime.UnixNano() / int64(time.Millisecond)
+
+			if lastMessageMilli - sentMilli <  int64(antiSpam.maxInterval) {
 				spamMatches = append(spamMatches, memberMessage)
 			}
 
@@ -117,12 +125,25 @@ func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
 			}
 
 		}
-		memberMessages.messageMtx.Unlock()
 
 		if len(spamMatches) >= protection.Threshold || len(duplicateMatches) >= protection.MaxDuplicates {
-			log.Printf("Spam detected in guild %v. Member: %v, spam matches: %v", message.GuildID, message.Author.ID, len(spamMatches))
+			log.Printf("Spam detected in guild %v. Member: %v, spam matches: %v, duplicateMatches: %v",
+				message.GuildID, message.Author.ID, len(spamMatches), len(duplicateMatches))
+			i := 0
+			for _, memberMessage := range memberMessages.messages {
+				for _, spamMessage := range spamMatches {
+					if spamMessage.ID == memberMessage.ID {
+						memberMessages.messages[i] = memberMessages.messages[0]
+						memberMessages.messages = memberMessages.messages[1:]
+						i--
+					}
+				}
+				i++
+			}
+
 			protection.Callback(message.GuildID, message.Author.ID, spamMatches)
 		}
+		memberMessages.messageMtx.Unlock()
 	}
 }
 

@@ -17,7 +17,7 @@ func (a* Aybus) onMemberJoin(session *discordgo.Session, memberAdd *discordgo.Gu
 
 	log.Printf("%v joined to %v.", memberAdd.User.Username, guild.Name)
 
-	msg := fmt.Sprintf("<@%v>, **Hoşgeldin.** : %v", memberAdd.User.ID, configuration.Manager.Greeting.GreetingMessages[msgIndex])
+	msg := fmt.Sprintf("<@%v>, **Hoşgeldin.** <:aybuscorona:785795738776502342> %v", memberAdd.User.ID, configuration.Manager.Greeting.GreetingMessages[msgIndex])
 
 	_, err = session.ChannelMessageSend(configuration.Manager.Greeting.GreetingChannel, msg)
 	if err != nil {

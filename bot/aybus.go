@@ -128,8 +128,8 @@ func (a *Aybus) receiveStreamChanges() {
 			embedMsg.URL = twitchUrl
 
 			thumbnail := strings.Replace(
-				strings.Replace(streamChange.ThumbnailURL, "{width}", "300", 1),
-				"{height}", "169", 1)
+				strings.Replace(streamChange.ThumbnailURL, "{width}", "400", 1),
+				"{height}", "225", 1)
 
 			embedMsg.Author = &discordgo.MessageEmbedAuthor{Name: streamChange.Username, IconURL: streamChange.AvatarURL}
 			embedMsg.Thumbnail = &discordgo.MessageEmbedThumbnail{
@@ -155,7 +155,7 @@ func (a *Aybus) receiveStreamChanges() {
 
 			_, err := a.discordConnection.ChannelMessageSendComplex(configuration.Manager.Channels.Sohbet, &discordgo.MessageSend{
 				Embed: embedMsg,
-				Content: fmt.Sprintf("@everyone, %v yayında! Aybusee'dekiler kan kardeşler.", twitchUrl),
+				Content: fmt.Sprintf("@everyone, %v yayında! Gel gel gel Aybuse'ye gel.", twitchUrl),
 			})
 			if err != nil {
 				log.Printf("Error on sending embed message to chat channel: %v", err)
