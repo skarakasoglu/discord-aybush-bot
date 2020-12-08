@@ -36,6 +36,7 @@ func NewServer(address string, port int,
 }
 
 func (srv *server) Start() error {
+	gin.SetMode(gin.TestMode)
 	router := gin.Default()
 
 	apiv1 := NewApiV1(srv.manager, srv.userFollowsChan, srv.streamChangedChan)

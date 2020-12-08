@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	embed "github.com/clinet/discordgo-embed"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"log"
 	"strconv"
@@ -117,7 +118,7 @@ func (cmd *muteCommand) Execute(message *discordgo.Message) (string, error) {
 				log.Printf("Error on removing muted role: %v", err)
 			}
 
-			botLogMsg := fmt.Sprintf("> <@%v> kullanıcısının **%v** sürelik mute rolü kaldırıldı.", mutedMember.ID, durationArg)
+			botLogMsg := fmt.Sprintf("> <@%v> kullanıcısının **%v** sürelik susturması kaldırıldı.", mutedMember.ID, durationArg)
 			_, err = cmd.session.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
 
 			if err != nil {
@@ -138,8 +139,40 @@ func (cmd *muteCommand) Execute(message *discordgo.Message) (string, error) {
 
 		}()
 
-		botLogMsg := fmt.Sprintf("> <@%v>, <@%v> kullanıcısına **%v** mute rolü verdi.", message.Author.ID, mutedMember.ID, durationArg)
-		_, err = cmd.session.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
+		botLogEmbedMsg := embed.NewGenericEmbed("Moderasyon İşlemi", "")
+		botLogEmbedMsg.Color = 0xF97100
+		botLogEmbedMsg.Fields = []*discordgo.MessageEmbedField{
+			{
+				Name:   "İşlem",
+				Value:  "Susturma",
+				Inline: true,
+			},
+			{
+				Name:   "Uygulanan Kişi",
+				Value:  fmt.Sprintf("<@%v>", mutedMember.ID),
+				Inline: true,
+			},
+			{
+				Name:   "Kanal",
+				Value:  fmt.Sprintf("<#%v>", message.ChannelID),
+				Inline: true,
+			},
+			{
+				Name:   "Uygulayan",
+				Value:  fmt.Sprintf("<@%v>", message.Author.ID),
+				Inline: false,
+						},
+			{
+				Name:   "Süre",
+				Value:  fmt.Sprintf("%v", durationArg),
+				Inline: false,
+						},
+		}
+		botLogEmbedMsg.Footer = &discordgo.MessageEmbedFooter{
+			Text:         time.Now().Format(time.Stamp),
+		}
+
+		_, err = cmd.session.ChannelMessageSendEmbed(configuration.Manager.Channels.BotLog, botLogEmbedMsg)
 		if err != nil {
 			log.Printf("Error on sending log message to bot log channel: %v", err)
 		}
@@ -164,5 +197,5 @@ func (cmd *muteCommand) Execute(message *discordgo.Message) (string, error) {
 }
 
 func (cmd *muteCommand) Usage() string{
-	return "**bu komut,** \n\"\\>!mute `<kullanıcı-adı>` `<süre(h|m|s)>`\"\n şeklinde kullanılır. *(Moderasyon yetkisi gerektirir.)*"
+	return "**bu komut,** \n> \"!mute `<kullanıcı-adı>` `<süre(h|m|s)>`\"\n şeklinde kullanılır. *(Moderasyon yetkisi gerektirir.)*"
 }
