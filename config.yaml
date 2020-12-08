@@ -5,7 +5,7 @@ baseImagePath: images
 #Twitch webhook api settings
 twitchApi:
   address: 0.0.0.0
-  port: 8000
+  port: 8080
 
 #Role groups
 roles:
