@@ -77,16 +77,18 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 		log.Printf("Duplicate streamChanged notification received from twitch: %v", notificationId)
 	} else {
 		api.receivedNotifications[notificationId] = notificationId
+		var streamChanged messages.StreamChanged
+
 		if len(streamChangePayload.Data) < 1 {
-			log.Printf("Aybusee went ofline.")
+			streamChanged.UserID = "0"
 		} else {
 			streamChangeInfo := streamChangePayload.Data[0]
-			log.Printf("Stream changed end point called: %v", streamChangeInfo)
+			log.Printf("Notification id: %v stream changed end point called: %v", notificationId, streamChangeInfo)
 
 			streamer := api.manager.getStreamerByUsername(streamChangeInfo.Username)
 			game := api.manager.getGameById(streamChangeInfo.GameId)
 
-			streamChanged := messages.StreamChanged{
+			streamChanged = messages.StreamChanged{
 				UserID:       streamChangeInfo.UserID,
 				Title:        streamChangeInfo.Title,
 				Username:     streamChangeInfo.Username,
@@ -96,9 +98,9 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 				ViewerCount:  streamChangeInfo.ViewerCount,
 				StartedAt:    streamChangeInfo.StartedAt.Local(),
 			}
-
-			api.streamChangedChan <- streamChanged
 		}
+
+		api.streamChangedChan <- streamChanged
 	}
 
 	ctx.String(http.StatusOK, "")
@@ -137,7 +139,7 @@ func (api *apiV1) onUserFollows(ctx *gin.Context) {
 			log.Printf("User follow end point called but no data found.")
 		} else {
 			followInfo := followPayload.Data[0]
-			log.Printf("User follows end point called: %v", followInfo)
+			log.Printf("NotificationId: %v User follows end point called: %v", notificationId, followInfo)
 			api.userFollowsChan <- followInfo
 		}
 	}
