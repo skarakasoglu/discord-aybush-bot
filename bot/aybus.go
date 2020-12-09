@@ -118,10 +118,23 @@ func (a *Aybus) updatePresence() {
 }
 
 func (a *Aybus) receiveStreamChanges() {
+	isLive := false
+
 	for a.IsRunning() {
 		for streamChange := range a.streamChangedChan {
 			log.Printf("Stream changed event received: %v", streamChange)
 
+			if streamChange.UserID == "0" {
+				log.Printf("%v ended the stream.", streamChange.Username)
+				isLive = false
+				continue
+			}
+
+			if isLive {
+				continue
+			}
+
+			isLive = true
 			twitchUrl := fmt.Sprintf("https://twitch.tv/%v", streamChange.Username)
 
 			embedMsg := embed.NewGenericEmbed(streamChange.Title, "")
