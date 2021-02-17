@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -106,7 +107,15 @@ func (man *Manager) getStreamerByUsername(username string) payloads.Streamer {
 		return payloads.Streamer{}
 	}
 
-	return streamerPayload.Data[0]
+	var streamerToReturn payloads.Streamer
+	for _, streamer := range streamerPayload.Data {
+		if strings.ToLower(streamer.DisplayName) == strings.ToLower(username) {
+			streamerToReturn = streamer
+			break
+		}
+	}
+
+	return streamerToReturn
 }
 
 func (man *Manager) getGameById(gameID string) payloads.Game {
