@@ -58,6 +58,8 @@ ticket:
 #Spam protection configurations
 antiSpam:
   ignoredChannels:
+    - 823686505737617408
+    - 823688889989333052
     - 469043458321940491
   mute:
     threshold: 4
