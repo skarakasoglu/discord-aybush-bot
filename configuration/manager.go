@@ -39,6 +39,8 @@ func ReadConfigurationFile(path string, fileName string) {
 }
 
 type roles struct{
+	SubRole string
+	ServerBoosterRole string
 	DefaultMemberRole string
 	MuteRole string
 	ModerationRoles []string

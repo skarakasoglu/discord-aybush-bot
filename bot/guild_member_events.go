@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
+	"github.com/skarakasoglu/discord-aybush-bot/data/models"
 	"log"
 )
 
@@ -39,6 +40,27 @@ func (a* Aybus) onMemberJoin(session *discordgo.Session, memberAdd *discordgo.Gu
 		log.Printf("Error on sending message via DM channel: %v", err)
 	}
 
+	joinedAt, err := memberAdd.JoinedAt.Parse()
+	if err != nil {
+		log.Printf("Error on parsing joined at: %v", err)
+	}
+
+	member := models.Member{
+		Id:            0,
+		MemberId:      memberAdd.User.ID,
+		Email:         memberAdd.User.Email,
+		Username:      memberAdd.User.Username,
+		Discriminator: memberAdd.User.Discriminator,
+		IsVerified:    memberAdd.User.Verified,
+		IsBot:         memberAdd.User.Bot,
+		Left:          false,
+		JoinedAt:      joinedAt,
+	}
+
+	_, err = a.repository.InsertMember(member)
+	if err != nil {
+		log.Printf("Error on inserting new member: %v to database: %v", member, err)
+	}
 }
 
 func (a* Aybus) onMemberLeave(session *discordgo.Session, memberLeave *discordgo.GuildMemberRemove) {

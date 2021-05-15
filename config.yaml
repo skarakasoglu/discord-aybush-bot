@@ -9,6 +9,8 @@ twitchApi:
 
 #Role groups
 roles:
+  subRole: 388714942242488320
+  serverBoosterRole: 651507582988451841
   defaultMemberRole: 440529266061344769
   muteRole: 491263963359870976
   moderationRoles:

@@ -7,6 +7,7 @@ import (
 	"github.com/skarakasoglu/discord-aybush-bot/bot/antispam"
 	"github.com/skarakasoglu/discord-aybush-bot/bot/commands"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
+	"github.com/skarakasoglu/discord-aybush-bot/data"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
 	"log"
@@ -34,14 +35,17 @@ type Aybus struct{
 
 	userFollowsChan <-chan payloads.UserFollows
 	streamChangedChan <-chan messages.StreamChanged
+
+	repository data.Repository
 }
 
 func New(discordConnection *discordgo.Session,
-	userFollowChan <-chan payloads.UserFollows, streamChangedChan <-chan messages.StreamChanged) *Aybus{
+	userFollowChan <-chan payloads.UserFollows, streamChangedChan <-chan messages.StreamChanged, repository data.Repository) *Aybus{
 	aybus := &Aybus{
 		discordConnection: discordConnection,
 		userFollowsChan: userFollowChan,
 		streamChangedChan: streamChangedChan,
+		repository: repository,
 	}
 
 	antiSpamConfiguration := configuration.Manager.AntiSpam
