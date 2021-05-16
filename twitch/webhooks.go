@@ -21,7 +21,7 @@ type webhookRequest struct{
 	Secret string `json:"hub.secret"`
 }
 
-func (man *Manager) subscribeToStreamChangedEvent(userID string, leaseSeconds int) {
+func (api *ApiClient) subscribeToStreamChangedEvent(userID int, leaseSeconds int) {
 	webhookReq := webhookRequest{
 		Callback:     fmt.Sprintf("%v/%v/streams", BASE_API_URL, DEFAULT_API_VER),
 		Mode:         "subscribe",
@@ -29,10 +29,10 @@ func (man *Manager) subscribeToStreamChangedEvent(userID string, leaseSeconds in
 		LeaseSeconds: leaseSeconds,
 		Secret:       hubSecret,
 	}
-	man.makeWebhookRequest(webhookReq)
+	api.makeWebhookRequest(webhookReq)
 }
 
-func (man *Manager) unsubscribeFromStreamChangedEvent(userID string, leaseSeconds int) {
+func (api *ApiClient) unsubscribeFromStreamChangedEvent(userID int, leaseSeconds int) {
 	webhookReq := webhookRequest{
 		Callback:     fmt.Sprintf("%v/%v/streams", BASE_API_URL, DEFAULT_API_VER),
 		Mode:         "unsubscribe",
@@ -40,10 +40,10 @@ func (man *Manager) unsubscribeFromStreamChangedEvent(userID string, leaseSecond
 		LeaseSeconds: leaseSeconds,
 		Secret:       hubSecret,
 	}
-	man.makeWebhookRequest(webhookReq)
+	api.makeWebhookRequest(webhookReq)
 }
 
-func (man *Manager) subscribeToUserFollowsEvent(userID string, leaseSeconds int) {
+func (api *ApiClient) subscribeToUserFollowsEvent(userID int, leaseSeconds int) {
 	webhookReq := webhookRequest{
 		Callback:     fmt.Sprintf("%v/%v/follows", BASE_API_URL, DEFAULT_API_VER),
 		Mode:         "subscribe",
@@ -51,21 +51,21 @@ func (man *Manager) subscribeToUserFollowsEvent(userID string, leaseSeconds int)
 		LeaseSeconds: leaseSeconds,
 		Secret:       hubSecret,
 	}
-	man.makeWebhookRequest(webhookReq)
+	api.makeWebhookRequest(webhookReq)
 }
 
-func (man *Manager) unsubscribeFromUserFollowsEvent(userID string, leaseSeconds int) {
+func (api *ApiClient) unsubscribeFromUserFollowsEvent(userID int, leaseSeconds int) {
 	webhookReq := webhookRequest{
 		Callback:     fmt.Sprintf("%v/%v/follows", BASE_API_URL, DEFAULT_API_VER),
 		Mode:         "unsubscribe",
 		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/users/follows?first=1&to_id=%v", userID),
 		LeaseSeconds: leaseSeconds,
-		Secret:       "aybush",
+		Secret:       hubSecret,
 	}
-	man.makeWebhookRequest(webhookReq)
+	api.makeWebhookRequest(webhookReq)
 }
 
-func (man *Manager) makeWebhookRequest(webhookReq webhookRequest) {
+func (api *ApiClient) makeWebhookRequest(webhookReq webhookRequest) {
 	webhookURL := "https://api.twitch.tv/helix/webhooks/hub"
 
 	reqBuffer, err := json.Marshal(webhookReq)
@@ -82,8 +82,8 @@ func (man *Manager) makeWebhookRequest(webhookReq webhookRequest) {
 		return
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", man.oauthToken))
-	req.Header.Set("Client-ID", man.clientId)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", api.appAccessToken))
+	req.Header.Set("Client-ID", api.clientId)
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}

@@ -1,7 +1,7 @@
 package models
 
-type Level struct{
+type DiscordLevel struct{
 	Id int
 	RequiredExperiencePoints int64
-	Role
+	DiscordRole
 }

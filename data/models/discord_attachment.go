@@ -1,6 +1,6 @@
 package models
 
-type Attachment struct {
+type DiscordAttachment struct {
 	Id int
 	AttachmentId string
 	Url string

@@ -11,7 +11,7 @@ import (
 type server struct{
 	address string
 	port int
-	manager *Manager
+	apiClient *ApiClient
 	userFollowsChan chan<- payloads.UserFollows
 	streamChangedChan chan<- messages.StreamChanged
 }
@@ -23,13 +23,13 @@ type api interface{
 }
 
 func NewServer(address string, port int,
-	manager *Manager,
+	apiClient *ApiClient,
 	userFollowsChan chan<- payloads.UserFollows,
 	streamChanged chan<- messages.StreamChanged) *server{
 	return &server{
 		address: address,
 		port: port,
-		manager: manager,
+		apiClient: apiClient,
 		userFollowsChan: userFollowsChan,
 		streamChangedChan: streamChanged,
 	}
@@ -39,7 +39,7 @@ func (srv *server) Start() error {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
-	apiv1 := NewApiV1(srv.manager, srv.userFollowsChan, srv.streamChangedChan)
+	apiv1 := NewApiV1(srv.apiClient, srv.userFollowsChan, srv.streamChangedChan)
 
 	twitchApi := router.Group("/api/twitch")
 

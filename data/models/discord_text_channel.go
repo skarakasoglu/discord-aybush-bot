@@ -1,6 +1,6 @@
 package models
 
-type TextChannel struct{
+type DiscordTextChannel struct{
 	Id int
 	ChannelId string
 	Name string

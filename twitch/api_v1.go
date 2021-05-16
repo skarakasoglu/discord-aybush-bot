@@ -15,16 +15,16 @@ import (
 )
 
 type apiV1 struct{
-	manager *Manager
+	apiClient *ApiClient
 	userFollowsChan chan<- payloads.UserFollows
 	streamChangedChan chan<- messages.StreamChanged
 	receivedNotifications map[string]string
 }
 
-func NewApiV1(manager *Manager, userFollowsChan chan<- payloads.UserFollows,
+func NewApiV1(apiClient *ApiClient, userFollowsChan chan<- payloads.UserFollows,
 	streamChangedChan chan<- messages.StreamChanged) *apiV1{
 	return &apiV1{
-		manager: manager,
+		apiClient: apiClient,
 		userFollowsChan: userFollowsChan,
 		streamChangedChan: streamChangedChan,
 		receivedNotifications: make(map[string]string),
@@ -85,15 +85,15 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 			streamChangeInfo := streamChangePayload.Data[0]
 			log.Printf("Notification id: %v stream changed end point called: %v", notificationId, streamChangeInfo)
 
-			streamer := api.manager.getStreamerByUsername(streamChangeInfo.Username)
-			game := api.manager.getGameById(streamChangeInfo.GameId)
+			streamer := api.apiClient.getUserInfoByUsername(streamChangeInfo.Username)
+			game := api.apiClient.getGameById(streamChangeInfo.GameId)
 
 			streamChanged = messages.StreamChanged{
 				UserID:       streamChangeInfo.UserID,
 				Title:        streamChangeInfo.Title,
 				Username:     streamChangeInfo.Username,
 				GameName:     game.Name,
-				AvatarURL:    streamer.ThumbnailURL,
+				AvatarURL:    streamer.ProfileImageUrl,
 				ThumbnailURL: streamChangeInfo.ThumbnailUrl,
 				ViewerCount:  streamChangeInfo.ViewerCount,
 				StartedAt:    streamChangeInfo.StartedAt.Local(),

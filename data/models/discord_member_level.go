@@ -2,9 +2,9 @@ package models
 
 import "time"
 
-type MemberLevel struct{
+type DiscordMemberLevel struct{
 	Id int
-	Member
+	DiscordMember
 	ExperiencePoints int64
 	LastMessageTimestamp time.Time
 }

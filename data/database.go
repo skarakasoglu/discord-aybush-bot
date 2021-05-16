@@ -1,22 +1,33 @@
 package data
 
-import "github.com/skarakasoglu/discord-aybush-bot/data/models"
+import (
+	"database/sql"
+	"fmt"
+	"log"
+)
 
-type Repository interface {
-	InsertMember(member models.Member) (bool, error)
-	GetMember(member models.Member) (models.Member, error)
-	DeleteMember(member models.Member) (bool, error)
-	GetAllMembers() ([]models.Member, error)
+type DatabaseCredentials struct{
+	Host string
+	Port int
+	Username string
+	Password string
+	DatabaseName string
+}
 
-	InsertMessage(message models.MemberMessage) (bool, error)
+func NewDB(credentials DatabaseCredentials) (*sql.DB, error) {
+	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", credentials.Host, credentials.Port, credentials.Username, credentials.Password, credentials.DatabaseName)
 
-	InsertRole(role models.Role) (bool, error)
-	GetRoles() ([]models.Role, error)
+	db, err := sql.Open("postgres", connectionString)
+	if err != nil {
+		log.Printf("Error on opening sql conn: %v", err)
+		return nil, err
+	}
 
-	InsertLevel(level models.Level) (bool, error)
-	GetLevels() ([]models.Level, error)
+	err = db.Ping()
+	if err != nil {
+		log.Printf("Error on pinging database: %v", err)
+		return db, err
+	}
 
-	InsertMemberLevel(level models.MemberLevel) (bool, error)
-	GetMemberLevel(member models.Member) (models.MemberLevel, error)
-	GetAllMemberLevels() ([]models.MemberLevel, error)
+	return db, nil
 }

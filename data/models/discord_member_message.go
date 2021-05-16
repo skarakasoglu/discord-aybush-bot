@@ -1,10 +1,10 @@
 package models
 
-type MemberMessage struct{
+type DiscordMemberMessage struct{
 	Id int
 	MessageId string
-	TextChannel
-	Member
+	DiscordTextChannel
+	DiscordMember
 	CreatedAt int64
 	EditedAt int64
 	IsActive bool
