@@ -93,7 +93,7 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 				Title:        streamChangeInfo.Title,
 				Username:     streamChangeInfo.Username,
 				GameName:     game.Name,
-				AvatarURL:    streamer.ThumbnailURL,
+				AvatarURL:    streamer.ProfileImageUrl,
 				ThumbnailURL: streamChangeInfo.ThumbnailUrl,
 				ViewerCount:  streamChangeInfo.ViewerCount,
 				StartedAt:    streamChangeInfo.StartedAt.Local(),

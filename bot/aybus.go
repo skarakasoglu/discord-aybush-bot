@@ -107,7 +107,7 @@ func (a *Aybus) IsRunning() bool {
 func (a *Aybus) updatePresence() {
 	for a.IsRunning() {
 		for _, val := range configuration.Manager.PresenceUpdate.Statuses {
-			err := a.discordConnection.UpdateStatus(0, val)
+			err := a.discordConnection.UpdateGameStatus(0, val)
 			if err != nil {
 				log.Printf("Error on updating status: %v", err)
 			}

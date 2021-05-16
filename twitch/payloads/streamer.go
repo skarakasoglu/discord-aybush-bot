@@ -2,17 +2,17 @@ package payloads
 
 import "time"
 
-type StreamerPayload struct{
-	Data []Streamer `json:"data"`
+type UserPayload struct{
+	Data []User `json:"data"`
 }
 
-type Streamer struct{
-	BroadcasterLanguage string `json:"broadcaster_language"`
+type User struct{
+	Id string `json:"id"`
+	Login string `json:"login"`
 	DisplayName string `json:"display_name"`
-	GameID string `json:"game_id"`
-	ID string `json:"id"`
-	IsLive bool `json:"is_live"`
-	ThumbnailURL string `json:"thumbnail_url"`
-	Title string `json:"title"`
-	StartedAt time.Time `json:"started_at"`
+	ProfileImageUrl string `json:"profile_image_url"`
+	Description string `json:"description"`
+	BroadcasterType string `json:"broadcaster_type"`
+	ViewCount int `json:"view_count"`
+	CreatedAt time.Time `json:"created_at"`
 }

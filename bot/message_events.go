@@ -6,7 +6,7 @@ import (
 	embed "github.com/clinet/discordgo-embed"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"log"
-	"mvdan.cc/xurls"
+	"mvdan.cc/xurls/v2"
 	"strings"
 	"time"
 )

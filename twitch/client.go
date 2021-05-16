@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -82,40 +81,27 @@ func (man *Manager) Stop() {
 	time.Sleep(time.Duration(5) * time.Second)
 }
 
-func (man *Manager) getStreamerByUsername(username string) payloads.Streamer {
-	gameReqUrl := fmt.Sprintf("https://api.twitch.tv/helix/search/channels?query=%v", username)
+func (man *Manager) getStreamerByUsername(username string) payloads.User {
+	gameReqUrl := fmt.Sprintf("https://api.twitch.tv/helix/users?login=%v", username)
 	resp, err := man.makeHttpGetRequest(gameReqUrl)
 	if err != nil {
 		log.Printf("Error on making request: %v", err)
-		return payloads.Streamer{}
+		return payloads.User{}
 	}
 
 	buffer, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("Error on reading response body: %v", err)
-		return payloads.Streamer{}
+		return payloads.User{}
 	}
 
-	var streamerPayload payloads.StreamerPayload
+	var streamerPayload payloads.UserPayload
 	err = json.Unmarshal(buffer, &streamerPayload)
 	if err != nil {
 		log.Printf("Error on unmarshalling json: %v", err)
 	}
 
-	if len(streamerPayload.Data) < 1 {
-		log.Printf("No streamer found.")
-		return payloads.Streamer{}
-	}
-
-	var streamerToReturn payloads.Streamer
-	for _, streamer := range streamerPayload.Data {
-		if strings.ToLower(streamer.DisplayName) == strings.ToLower(username) {
-			streamerToReturn = streamer
-			break
-		}
-	}
-
-	return streamerToReturn
+	return streamerPayload.Data[0]
 }
 
 func (man *Manager) getGameById(gameID string) payloads.Game {
