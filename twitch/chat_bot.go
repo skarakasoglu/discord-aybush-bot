@@ -107,7 +107,6 @@ func (cb *ChatBot) Start() {
 
 	go func() {
 		for cb.running {
-			log.Printf("For loop start")
 			if time.Now().Unix() - cb.lastMessageTimestamp.Unix() >= chatInactiveSeconds {
 				log.Printf("[TwitchChatBot] Bot is in inactive mode right now.")
 				cb.inactiveMode = true
