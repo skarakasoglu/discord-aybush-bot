@@ -5,6 +5,7 @@ import "time"
 type DiscordMember struct{
 	Id int
 	MemberId string
+	GuildId string
 	Email string
 	Username string
 	Discriminator string

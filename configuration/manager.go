@@ -22,6 +22,7 @@ type manager struct{
 	AntiSpam antiSpam
 	LoveMeter loveMeter
 	RockPaperScissors rockPaperScissors
+	LevelSystem levelSystem
 }
 
 func ReadConfigurationFile(path string, fileName string) {
@@ -55,6 +56,7 @@ type channels struct{
 	BotLog string
 	Aybus string
 	Sohbet string
+	Afk string
 }
 
 type greeting struct{
@@ -103,4 +105,10 @@ type rockPaperScissors struct{
 	HostWins string
 	AwayWins string
 	Draw string
+}
+
+type levelSystem struct{
+	Background string
+	IgnoredTextChannels []string
+	IgnoredVoiceChannels []string
 }

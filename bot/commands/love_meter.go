@@ -48,7 +48,7 @@ func (cmd *loveMeterCommand) Execute(message *discordgo.Message) (string, error)
 		return "", err
 	}
 
-	// aybus.go 'dan "rnd"yi çekemedim sıfırdan burada random oluşturdum. Olmadı sen onu düzenlersin
+	// aybush.go 'dan "rnd"yi çekemedim sıfırdan burada random oluşturdum. Olmadı sen onu düzenlersin
 	love_point := rnd.Intn(100)
 	heart := ":heart:"
 	bheart := ":black_heart:"

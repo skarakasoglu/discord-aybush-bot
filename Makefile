@@ -4,7 +4,8 @@ build:
 
 run:
 	echo "Running ${applicationName} in ${applicationMode} mode..."
-	${executablePath}/${executableName} --discord-token ${discordAccessToken} --twitch-token ${twitchAccessToken} --twitch-client-id ${twitchClientId} \
-		--hub-secret ${webhookHubSecret} --base-api-address ${baseApiAddress}
+	${executablePath}/${executableName} --discord-token ${discordAccessToken} \
+		--twitch-client-secret ${twitchClientSecret} --twitch-client-id ${twitchClientId} --twitch-authorization-code ${twitchAuthorizationCode} --twitch-redirect-uri ${twitchRedirectUri} \
+		--hub-secret ${webhookHubSecret} --base-api-address ${baseApiAddress} --db-ip-address ${dbIpAddress} --db-port ${dbPort} --db-username ${dbUsername} --db-password ${dbPassword} --db-name ${dbName}
 
 all: build run

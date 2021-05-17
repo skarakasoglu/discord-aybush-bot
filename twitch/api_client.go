@@ -7,11 +7,15 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 type ApiClient struct {
 	appAccessToken string
 	userAccessToken string
+
+	userRefreshToken string
 
 	clientId string
 	clientSecret string
@@ -32,84 +36,140 @@ func NewApiClient(clientId string, clientSecret string, authorizationCode string
 	return api
 }
 
-func (api *ApiClient) generateUserAccessToken() {
-	reqUrl := fmt.Sprintf("https://id.twitch.tv/oauth2/token?client_id=%v&client_secret=%v&code=%v&grant_type=authorization_code&redirect_uri=%v", api.clientId, api.clientSecret, api.authorizationCode, api.redirectUri)
-	req, err := http.NewRequest(http.MethodPost, reqUrl, nil)
+func (api *ApiClient) refreshUserAccessToken() {
+	reqUrl := fmt.Sprint("https://id.twitch.tv/oauth2/token")
+
+	data := url.Values{}
+	data.Set("grant_type", "refresh_token")
+	data.Set("refresh_token", api.userRefreshToken)
+	data.Set("client_id", api.clientId)
+	data.Set("client_secret", api.clientSecret)
+
+	req, err := http.NewRequest(http.MethodPost, reqUrl, strings.NewReader(data.Encode()))
 	if err != nil {
-		log.Printf("Error on creating new request: %v", err)
+		log.Printf("[TwitchApiClient] Error on creating new request: %v", err)
 	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Error on making request: %v", err)
-	return
+		log.Printf("[TwitchApiClient] Error on making request: %v", err)
+		return
 	}
 
 	buffer, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error on reading response body: %v", err)
+		log.Printf("[TwitchApiClient] Error on reading response body: %v", err)
 	}
 
 	var accessToken payloads.AccessToken
 	err = json.Unmarshal(buffer, &accessToken)
 	if err != nil {
-		log.Printf("Error on unmarshalling json: %v", err)
+		log.Printf("[TwitchApiClient] Error on unmarshalling json: %v", err)
+		return
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		log.Printf("[TwitchApiClient] Error on generating user access token: %v", string(buffer))
+		return
+	}
+
+	log.Printf("[TwitchApiClient] Twitch user access token generated successfully. Response: %v", string(buffer))
+	api.userAccessToken = accessToken.AccessToken
+	api.userRefreshToken = accessToken.RefreshToken
+}
+
+func (api *ApiClient) generateUserAccessToken() {
+	reqUrl := fmt.Sprintf("https://id.twitch.tv/oauth2/token?client_id=%v&client_secret=%v&code=%v&grant_type=authorization_code&redirect_uri=%v", api.clientId, api.clientSecret, api.authorizationCode, api.redirectUri)
+	req, err := http.NewRequest(http.MethodPost, reqUrl, nil)
+	if err != nil {
+		log.Printf("[TwitchApiClient] Error on creating new request: %v", err)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[TwitchApiClient] Error on making request: %v", err)
 	return
 	}
 
-	log.Printf("Twitch api access token generated successfully. Token: %v, Type: %v", accessToken.AccessToken, accessToken.TokenType)
+	buffer, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("[TwitchApiClient] Error on reading response body: %v", err)
+	}
+
+	var accessToken payloads.AccessToken
+	err = json.Unmarshal(buffer, &accessToken)
+	if err != nil {
+		log.Printf("[TwitchApiClient] Error on unmarshalling json: %v", err)
+		return
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		log.Printf("[TwitchApiClient] Error on generating user access token: %v", string(buffer))
+		return
+	}
+
+	log.Printf("[TwitchApiClient] Twitch user access token generated successfully. Response: %v", string(buffer))
 	api.userAccessToken = accessToken.AccessToken
+	api.userRefreshToken = accessToken.RefreshToken
 }
 
 func (api *ApiClient) generateAppAccessToken() {
 	reqUrl := fmt.Sprintf("https://id.twitch.tv/oauth2/token?client_id=%v&client_secret=%v&grant_type=client_credentials", api.clientId, api.clientSecret)
 	req, err := http.NewRequest(http.MethodPost, reqUrl, nil)
 	if err != nil {
-		log.Printf("Error on creating new request: %v", err)
+		log.Printf("[TwitchApiClient] Error on creating new request: %v", err)
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Error on making request: %v", err)
+		log.Printf("[TwitchApiClient] Error on making request: %v", err)
 		return
 	}
 
 	buffer, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error on reading response body: %v", err)
+		log.Printf("[TwitchApiClient] Error on reading response body: %v", err)
 	}
 
 	var accessToken payloads.AccessToken
 	err = json.Unmarshal(buffer, &accessToken)
 	if err != nil {
-		log.Printf("Error on unmarshalling json: %v", err)
+		log.Printf("[TwitchApiClient] Error on unmarshalling json: %v", err)
 		return
 	}
 
-	log.Printf("Twitch api access token generated successfully. Token: %v, Type: %v", accessToken.AccessToken, accessToken.TokenType)
+	if resp.StatusCode == http.StatusUnauthorized {
+		log.Printf("[TwitchApiClient] Error on generating app access token: %v", string(buffer))
+		return
+	}
+
+	log.Printf("[TwitchApiClient] Twitch api access token generated successfully. Response: %v", string(buffer))
 	api.appAccessToken = accessToken.AccessToken
 }
 
-func (api *ApiClient) getUserFollowage(fromId int, toId int) payloads.UserFollows {
-	followageReqUrl := fmt.Sprintf("", fromId, toId)
+func (api *ApiClient) getUserFollowage(fromId string, toId string) payloads.UserFollows {
+	followageReqUrl := fmt.Sprintf("https://api.twitch.tv/helix/users/follows?from_id=%v&to_id=%v", fromId, toId)
 	resp, err := api.makeHttpGetRequest(followageReqUrl)
 	if err != nil {
-		log.Printf("Error on making request: %v", err)
+		log.Printf("[TwitchApiClient] Error on making request: %v", err)
 		return payloads.UserFollows{}
 	}
 
 	buffer, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error on reading response body: %v", err)
+		log.Printf("[TwitchApiClient] Error on reading response body: %v", err)
 		return payloads.UserFollows{}
 	}
 
 	var followPayload payloads.UserFollowsPayload
 	err = json.Unmarshal(buffer, &followPayload)
 	if err != nil {
-		log.Printf("Error on unmarshalling json: %v", err)
+		log.Printf("[TwitchApiClient] Error on unmarshalling json: %v", err)
 		return payloads.UserFollows{}
 	}
 
@@ -124,20 +184,20 @@ func (api *ApiClient) getUserInfoByUsername(username string) payloads.User {
 	gameReqUrl := fmt.Sprintf("https://api.twitch.tv/helix/users?login=%v", username)
 	resp, err := api.makeHttpGetRequest(gameReqUrl)
 	if err != nil {
-		log.Printf("Error on making request: %v", err)
+		log.Printf("[TwitchApiClient] Error on making request: %v", err)
 		return payloads.User{}
 	}
 
 	buffer, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error on reading response body: %v", err)
+		log.Printf("[TwitchApiClient] Error on reading response body: %v", err)
 		return payloads.User{}
 	}
 
 	var userPayload payloads.UserPayload
 	err = json.Unmarshal(buffer, &userPayload)
 	if err != nil {
-		log.Printf("Error on unmarshalling json: %v", err)
+		log.Printf("[TwitchApiClient] Error on unmarshalling json: %v", err)
 	}
 
 	if len(userPayload.Data) < 1 {
@@ -152,24 +212,24 @@ func (api *ApiClient) getGameById(gameID string) payloads.Game {
 	gameReqUrl := fmt.Sprintf("https://api.twitch.tv/helix/games?id=%v", gameID)
 	resp, err := api.makeHttpGetRequest(gameReqUrl)
 	if err != nil {
-		log.Printf("Error on making request: %v", err)
+		log.Printf("[TwitchApiClient] Error on making request: %v", err)
 		return payloads.Game{}
 	}
 
 	buffer, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error on reading response body: %v", err)
+		log.Printf("[TwitchApiClient] Error on reading response body: %v", err)
 		return payloads.Game{}
 	}
 
 	var gamePayload payloads.GamePayload
 	err = json.Unmarshal(buffer, &gamePayload)
 	if err != nil {
-		log.Printf("Error on unmarshalling json: %v", err)
+		log.Printf("[TwitchApiClient] Error on unmarshalling json: %v", err)
 	}
 
 	if len(gamePayload.Data) < 1 {
-		log.Printf("No game found.")
+		log.Printf("[TwitchApiClient] No game found.")
 		return payloads.Game{}
 	}
 
@@ -186,7 +246,7 @@ func (api *ApiClient) makeHttpGetRequest(requestURL string) (*http.Response, err
 		req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 
 		if err != nil {
-			log.Printf("Error on creating new request: %v", req)
+			log.Printf("[TwitchApiClient] Error on creating new request: %v", req)
 			return nil, err
 		}
 
@@ -196,7 +256,7 @@ func (api *ApiClient) makeHttpGetRequest(requestURL string) (*http.Response, err
 		client := &http.Client{}
 		resp, err = client.Do(req)
 		if err != nil {
-			log.Printf("Error on making request: %v", err)
+			log.Printf("[TwitchApiClient] Error on making request: %v", err)
 			return nil, err
 		}
 

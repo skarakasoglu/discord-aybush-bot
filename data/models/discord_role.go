@@ -2,6 +2,6 @@ package models
 
 type DiscordRole struct{
 	Id int
-	RoleId int
+	RoleId string
 	Name string
 }

@@ -10,7 +10,7 @@ type TwitchRepository interface{
 
 	InsertTwitchBotCommand(command models.TwitchBotCommand) (bool, error)
 	UpdateTwitchBotCommandById(command models.TwitchBotCommand) (bool, error)
-	GetAllTwitchBotCommands(command models.TwitchBotCommand) ([]models.TwitchBotCommand, error)
+	GetAllTwitchBotCommands() ([]models.TwitchBotCommand, error)
 	DeleteTwitchBotCommandById(commandId int) (bool, error)
 
 	InsertTwitchBotMessage(message models.TwitchBotMessage) (bool, error)

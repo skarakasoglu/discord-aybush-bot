@@ -25,6 +25,7 @@ channels:
   botLog: 442441995265376287
   aybus: 608015865320964119
   sohbet: 386992275332399108
+  afk: 387628516797054986
 
 presenceUpdate:
   presenceUpdateFrequency: 5000
@@ -91,3 +92,14 @@ rockPaperScissors:
   hostWins: backgroundHostWins.png
   awayWins: backgroundAwayWins.png
   draw: backgroundDraw.png
+
+levelSystem:
+  background: rank_bg.png
+  ignoredTextChannels:
+    - 608015865320964119
+    - 469043458321940491
+    - 823686505737617408
+    - 823688889989333052
+    - 690696295148683304
+  ignoredVoiceChannels:
+    - 387628516797054986

@@ -21,7 +21,7 @@ type webhookRequest struct{
 	Secret string `json:"hub.secret"`
 }
 
-func (api *ApiClient) subscribeToStreamChangedEvent(userID int, leaseSeconds int) {
+func (api *ApiClient) subscribeToStreamChangedEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
 		Callback:     fmt.Sprintf("%v/%v/streams", BASE_API_URL, DEFAULT_API_VER),
 		Mode:         "subscribe",
@@ -32,7 +32,7 @@ func (api *ApiClient) subscribeToStreamChangedEvent(userID int, leaseSeconds int
 	api.makeWebhookRequest(webhookReq)
 }
 
-func (api *ApiClient) unsubscribeFromStreamChangedEvent(userID int, leaseSeconds int) {
+func (api *ApiClient) unsubscribeFromStreamChangedEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
 		Callback:     fmt.Sprintf("%v/%v/streams", BASE_API_URL, DEFAULT_API_VER),
 		Mode:         "unsubscribe",
@@ -43,7 +43,7 @@ func (api *ApiClient) unsubscribeFromStreamChangedEvent(userID int, leaseSeconds
 	api.makeWebhookRequest(webhookReq)
 }
 
-func (api *ApiClient) subscribeToUserFollowsEvent(userID int, leaseSeconds int) {
+func (api *ApiClient) subscribeToUserFollowsEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
 		Callback:     fmt.Sprintf("%v/%v/follows", BASE_API_URL, DEFAULT_API_VER),
 		Mode:         "subscribe",
@@ -54,7 +54,7 @@ func (api *ApiClient) subscribeToUserFollowsEvent(userID int, leaseSeconds int) 
 	api.makeWebhookRequest(webhookReq)
 }
 
-func (api *ApiClient) unsubscribeFromUserFollowsEvent(userID int, leaseSeconds int) {
+func (api *ApiClient) unsubscribeFromUserFollowsEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
 		Callback:     fmt.Sprintf("%v/%v/follows", BASE_API_URL, DEFAULT_API_VER),
 		Mode:         "unsubscribe",
@@ -70,7 +70,7 @@ func (api *ApiClient) makeWebhookRequest(webhookReq webhookRequest) {
 
 	reqBuffer, err := json.Marshal(webhookReq)
 	if err != nil {
-		log.Printf("Error on marshalling to json: %v", err)
+		log.Printf("[TwitchApiClient] Error on marshalling to json: %v", err)
 	}
 
 	reqBody := bytes.NewReader(reqBuffer)
@@ -78,7 +78,7 @@ func (api *ApiClient) makeWebhookRequest(webhookReq webhookRequest) {
 
 	req, err := http.NewRequest(http.MethodPost, webhookURL, reqBody)
 	if err != nil {
-		log.Printf("Error on making request to the end point: %v", err)
+		log.Printf("[TwitchApiClient] Error on making request to the end point: %v", err)
 		return
 	}
 
@@ -92,9 +92,9 @@ func (api *ApiClient) makeWebhookRequest(webhookReq webhookRequest) {
 	if resp.StatusCode != http.StatusAccepted {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Printf("Error on reading response body: %v", err)
+			log.Printf("[TwitchApiClient] Error on reading response body: %v", err)
 		}
 
-		log.Printf("Error on response status: %v, body: %v", resp.StatusCode, string(body))
+		log.Printf("[TwitchApiClient] Error on response status: %v, body: %v", resp.StatusCode, string(body))
 	}
 }
