@@ -378,15 +378,15 @@ func (m *Manager) calculateEarnedExperience(member *discordgo.Member, bothSubAnd
 
 	if isSub {
 		if isBooster {
-			earnedExperiencePoints = rnd.Intn(bothSubAndBoosterMax - bothSubAndBoosterMin) + bothSubAndBoosterMin
+			earnedExperiencePoints = rnd.Intn(bothSubAndBoosterMax - bothSubAndBoosterMin + 1) + bothSubAndBoosterMin
 		} else {
-			earnedExperiencePoints = rnd.Intn(notBoosterButSubMax - notBoosterButSubMin) + notBoosterButSubMin
+			earnedExperiencePoints = rnd.Intn(notBoosterButSubMax - notBoosterButSubMin + 1) + notBoosterButSubMin
 		}
 	} else {
 		if isBooster {
-			earnedExperiencePoints = rnd.Intn(notSubButBoosterMax - notSubButBoosterMin) + notSubButBoosterMin
+			earnedExperiencePoints = rnd.Intn(notSubButBoosterMax - notSubButBoosterMin + 1) + notSubButBoosterMin
 		} else {
-			earnedExperiencePoints = rnd.Intn(notSubNotBoosterMax - notSubNotBoosterMin) + notSubNotBoosterMin
+			earnedExperiencePoints = rnd.Intn(notSubNotBoosterMax - notSubNotBoosterMin + 1) + notSubNotBoosterMin
 		}
 	}
 
