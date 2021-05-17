@@ -240,6 +240,16 @@ func (m *Manager) OnRankQuery(user *discordgo.User) {
 func (m *Manager) OnVoiceUpdate(update *discordgo.VoiceStateUpdate) {
 	_, isIgnoredVoiceChannel := m.ignoredVoiceChannels[update.ChannelID]
 
+	member, err := m.session.GuildMember(update.GuildID, update.UserID)
+	if err != nil {
+		log.Printf("[AybushBot::LevelManager] Error on obtaining guild member: %v", err)
+		return
+	}
+
+	if member.User.Bot {
+		return
+	}
+
 	if update.ChannelID != "" && !update.SelfDeaf && !update.Deaf && !isIgnoredVoiceChannel {
 		voiceChanged := memberVoiceChanged{
 			memberId:   update.UserID,
