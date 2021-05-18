@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  aybushbot_test:
+    container_name: DiscordAybushBot
+    build: .
+    image: discord-aybush-bot:2.0.0
+    restart: always
+    environment:
+      applicationMode: Test
+      applicationName: "Discord Aybush Bot"
+      executablePath: bin
+      executableName: DiscordAybushBot
+      baseApiAddress: 1.2.3.4:5
+      discordAccessToken: discord_access_token
+      twitchClientId: twitch_client_id
+      twitchClientSecret: twitch_client_secret
+      twitchAuthorizationCode: twitch_authorization_code
+      twitchRedirectUri: https://1.2.3.4:5
+      dbIpAddress: 1.2.3.4
+      dbPort: 5432
+      dbUsername: db_username
+      dbPassword: db_password
+      dbName: db_name
+      webhookHubSecret: very_secret
+    ports:
+    - "8080:8080"

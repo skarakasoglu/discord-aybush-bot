@@ -6,6 +6,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/skarakasoglu/discord-aybush-bot/bot"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
+	"github.com/skarakasoglu/discord-aybush-bot/data"
+	"github.com/skarakasoglu/discord-aybush-bot/service"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
@@ -19,20 +21,34 @@ var (
 	configurationFileName string
 	configurationFilePath string
 	discordAccessToken string
-	twitchAccessToken string
 	twitchClientId string
+	twitchClientSecret string
+	twitchAuthorizationCode string
+	twitchRedirectUri string
 	hubSecret string
 	baseApiAddress string
+	dbHost string
+	dbPort int
+	dbUsername string
+	dbPassword string
+	dbName string
 )
 
 func init() {
 	flag.StringVar(&discordAccessToken,"discord-token", "", "discord api application access token")
 	flag.StringVar(&configurationFileName,"cfg-file", "config", "application configuration file name")
 	flag.StringVar(&configurationFilePath, "cfg-file-path", ".", "application configuration file path")
-	flag.StringVar(&twitchAccessToken, "twitch-token", "", "twitch api oauth token")
 	flag.StringVar(&twitchClientId, "twitch-client-id", "", "twitch api client id")
+	flag.StringVar(&twitchClientSecret, "twitch-client-secret", "", "twitch api client secret to generate access token")
+	flag.StringVar(&twitchAuthorizationCode, "twitch-authorization-code", "", "twitch api authorization code to generate user access token")
+	flag.StringVar(&twitchRedirectUri, "twitch-redirect-uri", "", "twitch developer application redirect uri")
 	flag.StringVar(&hubSecret, "hub-secret", "", "twitch webhook api secret")
 	flag.StringVar(&baseApiAddress, "base-api-address", "", "twitch webhook api server address")
+	flag.StringVar(&dbHost, "db-ip-address", "", "database ip address")
+	flag.IntVar(&dbPort, "db-port", 0, "database port")
+	flag.StringVar(&dbUsername, "db-username", "", "database login username")
+	flag.StringVar(&dbPassword, "db-password", "", "database login password")
+	flag.StringVar(&dbName, "db-name", "", "database name")
 	flag.Parse()
 
 	configuration.ReadConfigurationFile(configurationFilePath, configurationFileName)
@@ -53,13 +69,29 @@ func main() {
 	userFollowChan := make(chan payloads.UserFollows)
 	streamChangedChan := make(chan messages.StreamChanged)
 
-	aybusBot := bot.New(dg, userFollowChan, streamChangedChan)
+	db, err := data.NewDB(data.DatabaseCredentials{
+		Host:         dbHost,
+		Port:         dbPort,
+		Username:     dbUsername,
+		Password:     dbPassword,
+		DatabaseName: dbName,
+	})
+	if err != nil {
+		log.Printf("Error on creating db connection: %v", err)
+		return
+	}
+
+	discordService := service.NewDiscordService(db)
+	twitchService := service.NewTwitchService(db)
+	streamerUsername := "aybusee"
+
+	aybusBot := bot.New(dg, userFollowChan, streamChangedChan, discordService)
 	aybusBot.Start()
 
-	twitchWebhookManager := twitch.NewManager(twitchAccessToken, twitchClientId, userFollowChan, streamChangedChan, hubSecret, baseApiAddress)
+	twitchWebhookManager := twitch.NewManager(streamerUsername, twitchClientSecret, twitchClientId, twitchAuthorizationCode, twitchRedirectUri, userFollowChan, streamChangedChan, hubSecret, baseApiAddress, twitchService)
 	err = twitchWebhookManager.Start()
 
-	log.Println("AYBUŞ BOT is now running. Press CTRL + C to interrupt.")
+	log.Println("AYBUSH BOT is now running. Press CTRL + C to interrupt.")
 	signalHandler := make (chan os.Signal)
 	signal.Notify(signalHandler, os.Interrupt, os.Kill, syscall.SIGUSR1, syscall.SIGTERM)
 	receivedSignal := <-signalHandler

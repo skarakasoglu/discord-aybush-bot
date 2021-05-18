@@ -11,7 +11,11 @@ import (
 	"time"
 )
 
-func (a *Aybus) onCommandReceived(session *discordgo.Session, messageCreate *discordgo.MessageCreate) {
+func (a *Aybush) onLevel(session *discordgo.Session, create *discordgo.MessageCreate) {
+	a.levelManager.OnMessage(create)
+}
+
+func (a *Aybush) onCommandReceived(session *discordgo.Session, messageCreate *discordgo.MessageCreate) {
 	messageContent := messageCreate.Message.Content
 	isCommand := strings.HasPrefix(messageContent, COMMAND_PREFIX)
 	if !isCommand {
@@ -25,7 +29,7 @@ func (a *Aybus) onCommandReceived(session *discordgo.Session, messageCreate *dis
 
 	cmd, ok := a.commands[commandArguments[0]]
 	if !ok {
-		log.Printf("Invalid command received. The command entered is %v", commandArguments[0])
+		log.Printf("[AybushBot] Invalid command received. The command entered is %v", commandArguments[0])
 		return
 	}
 
@@ -34,7 +38,7 @@ func (a *Aybus) onCommandReceived(session *discordgo.Session, messageCreate *dis
 			helpMsg := fmt.Sprintf("<@%v>, %v", messageCreate.Author.ID, cmd.Usage())
 			_, err := session.ChannelMessageSend(messageCreate.ChannelID, helpMsg)
 			if err != nil {
-				log.Printf("Error on sending command usage message to the channel: %v", err)
+				log.Printf("[AybushBot] Error on sending command usage message to the channel: %v", err)
 			}
 			return
 		}
@@ -42,19 +46,19 @@ func (a *Aybus) onCommandReceived(session *discordgo.Session, messageCreate *dis
 
 	response, err := cmd.Execute(messageCreate.Message)
 	if err != nil {
-		log.Printf("Error on executing the command: %v", err)
+		log.Printf("[AybushBot] Error on executing the command: %v", err)
 		return
 	}
 
 	if response != "" {
 		_, err = session.ChannelMessageSend(messageCreate.ChannelID, response)
 		if err != nil {
-			log.Printf("Error on sending command response to the channel: %v", err)
+			log.Printf("[AybushBot] Error on sending command response to the channel: %v", err)
 		}
 	}
 }
 
-func (a *Aybus) onURLSend(session *discordgo.Session, messageCreate *discordgo.MessageCreate) {
+func (a *Aybush) onURLSend(session *discordgo.Session, messageCreate *discordgo.MessageCreate) {
 	isChannelRestricted := func() bool {
 		for _, val := range configuration.Manager.UrlRestriction.RestrictedChannels {
 			if messageCreate.ChannelID == val {
@@ -94,25 +98,25 @@ func (a *Aybus) onURLSend(session *discordgo.Session, messageCreate *discordgo.M
 	msg := fmt.Sprintf("> <@%v>, %v", messageCreate.Message.Author.ID, configuration.Manager.UrlRestriction.WarningMessage)
 	_, err := session.ChannelMessageSend(messageCreate.ChannelID, msg)
 	if err != nil {
-		log.Printf("Error on sending warning message to channel: %v", err)
+		log.Printf("[AybushBot] Error on sending warning message to channel: %v", err)
 	}
 
 	err = session.ChannelMessageDelete(messageCreate.ChannelID, messageCreate.Message.ID)
 	if err != nil {
-		log.Printf("Error on deleting a message which contains a URL: %v", err)
+		log.Printf("[AybushBot] Error on deleting a message which contains a URL: %v", err)
 	}
 }
 
-func (a *Aybus) onSpamCheck(session *discordgo.Session, messageCreate *discordgo.MessageCreate) {
+func (a *Aybush) onSpamCheck(session *discordgo.Session, messageCreate *discordgo.MessageCreate) {
 	a.antiSpam.OnMessage(messageCreate.Message)
 }
 
-func (a *Aybus) muteUserOnSpam(guildId string, memberId string, spamMessages []*discordgo.Message) {
+func (a *Aybush) muteUserOnSpam(guildId string, memberId string, spamMessages []*discordgo.Message) {
 	log.Printf("User %v muted in guild %v.", memberId, guildId)
 
 	err := a.discordConnection.GuildMemberRoleAdd(guildId, memberId, configuration.Manager.Roles.MuteRole)
 	if err != nil {
-		log.Printf("Error on adding muted role to member: %v", err)
+		log.Printf("[AybushBot] Error on adding muted role to member: %v", err)
 	}
 
 	lastChannelId := ""
@@ -121,7 +125,7 @@ func (a *Aybus) muteUserOnSpam(guildId string, memberId string, spamMessages []*
 
 		err = a.discordConnection.ChannelMessageDelete(msg.ChannelID, msg.ID)
 		if err != nil {
-			log.Printf("Error on deleting a spam message: %v", err)
+			log.Printf("[AybushBot] Error on deleting a spam message: %v", err)
 		}
 	}
 
@@ -132,14 +136,14 @@ func (a *Aybus) muteUserOnSpam(guildId string, memberId string, spamMessages []*
 		time.Sleep(time.Duration(configuration.Manager.AntiSpam.Mute.Duration) * time.Millisecond)
 		err = a.discordConnection.GuildMemberRoleRemove(guildId, memberId, configuration.Manager.Roles.MuteRole)
 		if err != nil {
-			log.Printf("Error on removing muted role from member: %v", err)
+			log.Printf("[AybushBot] Error on removing muted role from member: %v", err)
 		}
 
 		botLogMsg := fmt.Sprintf("> <@%v> kullanıcısının **spam** sebebiyle verilen `%v` dakikalık susturması kaldırıldı.", memberId,
 			muteDurationInMutes)
 		_, err = a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog, botLogMsg)
 		if err != nil {
-			log.Printf("Error on writing log to bot log channel: %v", err)
+			log.Printf("[AybushBot] Error on writing log to bot log channel: %v", err)
 		}
 
 	}()
@@ -147,19 +151,19 @@ func (a *Aybus) muteUserOnSpam(guildId string, memberId string, spamMessages []*
 	notificationMessageToGuildChannel := fmt.Sprintf(configuration.Manager.AntiSpam.Mute.ChannelMessage, memberId, muteDurationInMutes)
 	_, err = a.discordConnection.ChannelMessageSend(lastChannelId, notificationMessageToGuildChannel)
 	if err != nil {
-		log.Printf("Error on sending mute notification message to guild channel: %v", err)
+		log.Printf("[AybushBot] Error on sending mute notification message to guild channel: %v", err)
 	}
 
 	dmChannel, err := a.discordConnection.UserChannelCreate(memberId)
 	if err != nil {
-		log.Printf("Error on creating DM channel: %v", err)
+		log.Printf("[AybushBot] Error on creating DM channel: %v", err)
 		return
 	}
 
 	notificationMessageToDMChannel := fmt.Sprintf(configuration.Manager.AntiSpam.Mute.Message, muteDurationInMutes)
 	_, err = a.discordConnection.ChannelMessageSend(dmChannel.ID, notificationMessageToDMChannel)
 	if err != nil{
-		log.Printf("Error on sending mute notification message to DM channel: %v", err)
+		log.Printf("[AybushBot] Error on sending mute notification message to DM channel: %v", err)
 	}
 
 
@@ -204,6 +208,6 @@ func (a *Aybus) muteUserOnSpam(guildId string, memberId string, spamMessages []*
 
 	_, err = a.discordConnection.ChannelMessageSendEmbed(configuration.Manager.Channels.BotLog, botLogEmbedMsg)
 	if err != nil {
-		log.Printf("Error on writing log to bot log channel: %v", err)
+		log.Printf("[AybushBot] Error on writing log to bot log channel: %v", err)
 	}
 }

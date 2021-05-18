@@ -101,14 +101,14 @@ func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
 
 		lastMessageTime, err := message.Timestamp.Parse()
 		if err != nil {
-			log.Printf("Error on parsing timestamp data for last message: %v", err)
+			log.Printf("[AybushBot::AntiSpam] Error on parsing timestamp data for last message: %v", err)
 			lastMessageTime = time.Now()
 		}
 
 		for _, memberMessage := range memberMessages.messages {
 			sentTime, err := memberMessage.Timestamp.Parse()
 			if err != nil {
-				log.Printf("Error on parsing timestamp data for a member message: %v", err)
+				log.Printf("[AybushBot::AntiSpam] Error on parsing timestamp data for a member message: %v", err)
 				continue
 			}
 
@@ -127,7 +127,7 @@ func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
 		}
 
 		if len(spamMatches) >= protection.Threshold || len(duplicateMatches) >= protection.MaxDuplicates {
-			log.Printf("Spam detected in guild %v. Member: %v, spam matches: %v, duplicateMatches: %v",
+			log.Printf("[AybushBot::AntiSpam] Spam detected in guild %v. Member: %v, spam matches: %v, duplicateMatches: %v",
 				message.GuildID, message.Author.ID, len(spamMatches), len(duplicateMatches))
 			i := 0
 			for _, memberMessage := range memberMessages.messages {

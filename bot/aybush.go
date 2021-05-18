@@ -6,7 +6,9 @@ import (
 	embed "github.com/clinet/discordgo-embed"
 	"github.com/skarakasoglu/discord-aybush-bot/bot/antispam"
 	"github.com/skarakasoglu/discord-aybush-bot/bot/commands"
+	"github.com/skarakasoglu/discord-aybush-bot/bot/level"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
+	"github.com/skarakasoglu/discord-aybush-bot/repository"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
 	"log"
@@ -25,23 +27,29 @@ var (
 	rnd = rand.New(randSource)
 )
 
-type Aybus struct{
+type Aybush struct{
 	discordConnection *discordgo.Session
 	running bool
+
+	levelManager *level.Manager
 
 	antiSpam antispam.AntiSpam
 	commands map[string]commands.Command
 
 	userFollowsChan <-chan payloads.UserFollows
 	streamChangedChan <-chan messages.StreamChanged
+
+	discordRepository repository.DiscordRepository
 }
 
 func New(discordConnection *discordgo.Session,
-	userFollowChan <-chan payloads.UserFollows, streamChangedChan <-chan messages.StreamChanged) *Aybus{
-	aybus := &Aybus{
+	userFollowChan <-chan payloads.UserFollows, streamChangedChan <-chan messages.StreamChanged, discordRepository repository.DiscordRepository) *Aybush {
+	aybus := &Aybush{
+		levelManager: level.NewManager(discordConnection, discordRepository, configuration.Manager.LevelSystem.IgnoredTextChannels, configuration.Manager.LevelSystem.IgnoredVoiceChannels),
 		discordConnection: discordConnection,
 		userFollowsChan: userFollowChan,
 		streamChangedChan: streamChangedChan,
+		discordRepository: discordRepository,
 	}
 
 	antiSpamConfiguration := configuration.Manager.AntiSpam
@@ -64,17 +72,19 @@ func New(discordConnection *discordgo.Session,
 	muteCmd := commands.NewMuteCommand(discordConnection)
 	aybus.commands[muteCmd.Name()] = muteCmd
 
-
 	loveMtrCmd := commands.NewLoveMeterCommand(discordConnection)
 	aybus.commands[loveMtrCmd.Name()] = loveMtrCmd
 
 	rockPaperScissors := commands.NewRockPaperScissorsCommand(discordConnection)
 	aybus.commands[rockPaperScissors.Name()] = rockPaperScissors
 
+	rank := commands.NewRankCommand(aybus.levelManager.OnRankQuery)
+	aybus.commands[rank.Name()] = rank
+
 	return aybus
 }
 
-func (a* Aybus) Start() {
+func (a*Aybush) Start() {
 	a.running = true
 
 	log.Println("Registering handlers.")
@@ -85,31 +95,41 @@ func (a* Aybus) Start() {
 	a.discordConnection.AddHandler(a.onTicketReactionAdd)
 	a.discordConnection.AddHandler(a.onTicketReactionRemove)
 	a.discordConnection.AddHandler(a.onSpamCheck)
+	a.discordConnection.AddHandler(a.onLevel)
+	a.discordConnection.AddHandler(a.onVoiceLevel)
+	a.discordConnection.AddHandler(a.onRoleCreate)
+	a.discordConnection.AddHandler(a.onRoleUpdate)
+	a.discordConnection.AddHandler(a.onRoleDelete)
+	a.discordConnection.AddHandler(a.onChannelCreate)
+	a.discordConnection.AddHandler(a.onChannelUpdate)
+	a.discordConnection.AddHandler(a.onChannelDelete)
+
+	a.levelManager.Start()
 
 	go a.updatePresence()
 	go a.receiveStreamChanges()
 	go a.receiveUserFollows()
 }
 
-func (a* Aybus) Stop() {
+func (a*Aybush) Stop() {
 	a.running = false
 
 	err := a.discordConnection.Close()
 	if err != nil {
-		log.Printf("Error on closing websocket connection with Discord API: %v", err)
+		log.Printf("[AybushBot] Error on closing websocket connection with Discord API: %v", err)
 	}
 }
 
-func (a *Aybus) IsRunning() bool {
+func (a *Aybush) IsRunning() bool {
 	return a.running
 }
 
-func (a *Aybus) updatePresence() {
+func (a *Aybush) updatePresence() {
 	for a.IsRunning() {
 		for _, val := range configuration.Manager.PresenceUpdate.Statuses {
 			err := a.discordConnection.UpdateGameStatus(0, val)
 			if err != nil {
-				log.Printf("Error on updating status: %v", err)
+				log.Printf("[AybushBot] Error on updating status: %v", err)
 			}
 
 			time.Sleep(time.Millisecond * time.Duration(configuration.Manager.PresenceUpdate.PresenceUpdateFrequency))
@@ -117,12 +137,12 @@ func (a *Aybus) updatePresence() {
 	}
 }
 
-func (a *Aybus) receiveStreamChanges() {
+func (a *Aybush) receiveStreamChanges() {
 	isLive := false
 
 	for a.IsRunning() {
 		for streamChange := range a.streamChangedChan {
-			log.Printf("Stream changed event received: %v", streamChange)
+			log.Printf("[AybushBot] Stream changed event received: %v", streamChange)
 
 			if streamChange.UserID == "0" {
 				log.Printf("%v ended the stream.", streamChange.Username)
@@ -171,21 +191,21 @@ func (a *Aybus) receiveStreamChanges() {
 				Content: fmt.Sprintf("@everyone, %v yayında! Gel gel gel Aybuse'ye gel.", twitchUrl),
 			})
 			if err != nil {
-				log.Printf("Error on sending embed message to chat channel: %v", err)
+				log.Printf("[AybushBot] Error on sending embed message to chat channel: %v", err)
 			}
 		}
 	}
 }
 
-func (a *Aybus) receiveUserFollows() {
+func (a *Aybush) receiveUserFollows() {
 	for a.IsRunning() {
 		for userFollows := range a.userFollowsChan {
-			log.Printf("User follows event received: %v", userFollows)
+			log.Printf("[AybushBot] User follows event received: %v", userFollows)
 			_, err := a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog,
 				fmt.Sprintf("> **%v** aybusee'yi **%v** tarihinde takip etti.", userFollows.FromName,
 					userFollows.FollowedAt.Local().Format(time.Stamp)))
 			if err != nil {
-				log.Printf("Error on writing to bot log channel: %v", err)
+				log.Printf("[AybushBot] Error on writing to bot log channel: %v", err)
 			}
 		}
 	}
