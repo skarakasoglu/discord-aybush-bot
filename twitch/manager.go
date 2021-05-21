@@ -24,8 +24,7 @@ type Manager struct{
 
 	clientSecret string
 	clientId string
-	authorizationCode string
-	redirectUri string
+	userRefreshToken string
 
 	apiClient *ApiClient
 	chatBot *ChatBot
@@ -37,7 +36,7 @@ type Manager struct{
 	twitchRepository repository.TwitchRepository
 }
 
-func NewManager(streamerUsername string, clientSecret string, clientID string, authorizationCode string, redirectUri string,
+func NewManager(streamerUsername string, clientSecret string, clientID string, userRefreshToken string,
 	userFollowsChan chan<- payloads.UserFollows,
 	streamChangedChan chan<- messages.StreamChanged, hubSecretP string, baseApiURL string, twitchRepository repository.TwitchRepository) *Manager{
 	hubSecret = hubSecretP
@@ -47,13 +46,12 @@ func NewManager(streamerUsername string, clientSecret string, clientID string, a
 		streamer: payloads.User{Login: streamerUsername},
 		clientSecret: clientSecret,
 		clientId: clientID,
-		authorizationCode: authorizationCode,
-		redirectUri: redirectUri,
+		userRefreshToken: userRefreshToken,
 		userFollowsChan: userFollowsChan,
 		streamChangedChan: streamChangedChan,
 		running: false,
 		twitchRepository: twitchRepository,
-		apiClient: NewApiClient(clientID, clientSecret, authorizationCode, redirectUri),
+		apiClient: NewApiClient(clientID, clientSecret, userRefreshToken),
 	}
 }
 

@@ -87,6 +87,12 @@ var (
 	rnd = rand.New(randSrc)
 )
 
+type ReloadMessage struct{
+	ReloadMemberLevels bool
+	ReloadDiscordMemberLevelMessages bool
+	ReloadLevels bool
+}
+
 type Manager struct{
 	running bool
 
@@ -106,6 +112,7 @@ type Manager struct{
 
 	membersInVoice map[string]string
 
+	reloadChan chan ReloadMessage
 	onRankQueryChan chan *discordgo.User
 	onVoiceChan chan memberVoiceChanged
 	onMessageChan chan *discordgo.MessageCreate
@@ -128,6 +135,7 @@ func NewManager(session *discordgo.Session, discordRepository repository.Discord
 		session: session,
 		memberLevelStatuses: make(map[string]*MemberLevelStatus),
 		membersInVoice: make(map[string]string),
+		reloadChan: make(chan ReloadMessage, 500),
 		onRankQueryChan: make(chan *discordgo.User, 500),
 		onMessageChan: make(chan *discordgo.MessageCreate, 500),
 		onVoiceChan: make(chan memberVoiceChanged, 500),
@@ -139,17 +147,31 @@ func NewManager(session *discordgo.Session, discordRepository repository.Discord
 func (m *Manager) Start() {
 	m.running = true
 
+	m.loadDiscordLevels()
+	m.loadDiscordLevelUpMessages()
+	m.loadDiscordMemberLevels()
+
+	go m.giveExperienceActiveVoiceUsers()
+	go m.workAsync()
+}
+
+func (m *Manager) loadDiscordLevels() {
 	var err error
 	m.levels, err = m.discordRepository.GetAllDiscordLevels()
 	if err != nil {
 		log.Printf("[AybushBot::LevelManager] Error on fetching levels: %v", err)
 	}
+}
 
+func (m *Manager) loadDiscordLevelUpMessages() {
+	var err error
 	m.levelUpMessages, err = m.discordRepository.GetAllDiscordLevelUpMessages()
 	if err != nil {
 		log.Printf("[AybushBot::LevelManager] Error on fetching level up messages: %v", err)
 	}
+}
 
+func (m *Manager) loadDiscordMemberLevels() {
 	memberLevels, err := m.discordRepository.GetAllDiscordMemberLevels()
 	if err != nil {
 		log.Printf("[AybushBot::LevelManager] Error on fetching all member levels: %v", err)
@@ -195,17 +217,23 @@ func (m *Manager) Start() {
 	}
 
 	sort.Sort(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses))
-
-	go m.workAsync()
 }
 
 func (m *Manager) Stop() {
 	m.running = false
 }
 
-func (m *Manager) workAsync() {
-	lastVoicePointsGiven := time.Unix(0, 0)
+func (m *Manager) giveExperienceActiveVoiceUsers() {
+	for m.running {
+		for _, memberId := range m.membersInVoice {
+			m.earnExperienceFromVoice(memberId)
+		}
 
+		time.Sleep(time.Second * time.Duration(voiceChannelEarningTimeoutSeconds))
+	}
+}
+
+func (m *Manager) workAsync() {
 	for m.running {
 		select {
 		case user := <- m.onRankQueryChan:
@@ -221,16 +249,24 @@ func (m *Manager) workAsync() {
 			}
 		case messageCreate := <- m.onMessageChan:
 			m.earnExperienceFromMessage(messageCreate)
-		default:
-			if time.Now().Unix() - lastVoicePointsGiven.Unix() > voiceChannelEarningTimeoutSeconds {
-				for _, memberId := range m.membersInVoice {
-					m.earnExperienceFromVoice(memberId)
-				}
+		case reloadMsg := <- m.reloadChan:
+			log.Printf("[AybushBot::LevelManager] Reload message %+v", reloadMsg)
 
-				lastVoicePointsGiven = time.Now()
+			if reloadMsg.ReloadLevels {
+				m.loadDiscordLevels()
+			}
+			if reloadMsg.ReloadDiscordMemberLevelMessages {
+				m.loadDiscordLevelUpMessages()
+			}
+			if reloadMsg.ReloadMemberLevels {
+				m.loadDiscordMemberLevels()
 			}
 		}
 	}
+}
+
+func (m *Manager) OnReload(reload ReloadMessage) {
+	m.reloadChan <- reload
 }
 
 func (m *Manager) OnRankQuery(user *discordgo.User) {
@@ -375,6 +411,8 @@ func (m *Manager) calculateEarnedExperience(member *discordgo.Member, bothSubAnd
 			isBooster = true
 		}
 	}
+	log.Printf("[AybushBot::LevelManager] MemberId: %v, Username: %v#%v, IsSub: %v, IsBooster: %v",
+		member.User.ID, member.User.Username, member.User.Discriminator, isSub, isBooster)
 
 	if isSub {
 		if isBooster {

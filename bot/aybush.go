@@ -87,7 +87,7 @@ func New(discordConnection *discordgo.Session,
 func (a*Aybush) Start() {
 	a.running = true
 
-	log.Println("Registering handlers.")
+	log.Println("[AybushBot] Registering handlers.")
 	a.discordConnection.AddHandler(a.onMemberJoin)
 	a.discordConnection.AddHandler(a.onMemberLeave)
 	a.discordConnection.AddHandler(a.onCommandReceived)
@@ -104,6 +104,7 @@ func (a*Aybush) Start() {
 	a.discordConnection.AddHandler(a.onChannelUpdate)
 	a.discordConnection.AddHandler(a.onChannelDelete)
 
+	a.antiSpam.Start()
 	a.levelManager.Start()
 
 	go a.updatePresence()
@@ -113,6 +114,9 @@ func (a*Aybush) Start() {
 
 func (a*Aybush) Stop() {
 	a.running = false
+
+	a.antiSpam.Stop()
+	a.levelManager.Stop()
 
 	err := a.discordConnection.Close()
 	if err != nil {
@@ -145,7 +149,7 @@ func (a *Aybush) receiveStreamChanges() {
 			log.Printf("[AybushBot] Stream changed event received: %v", streamChange)
 
 			if streamChange.UserID == "0" {
-				log.Printf("%v ended the stream.", streamChange.Username)
+				log.Printf("[AybushBot] %v ended the stream.", streamChange.Username)
 				isLive = false
 				continue
 			}

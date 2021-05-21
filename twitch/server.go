@@ -45,9 +45,9 @@ func (srv *server) Start() error {
 
 	v1 := twitchApi.Group("/v1")
 	{
-		v1.GET("/streams", apiv1.onSubscriptionValidated)
+		v1.GET("/streams/:userId", apiv1.onSubscriptionValidated)
 		v1.GET("/follows", apiv1.onSubscriptionValidated)
-		v1.POST("/streams", apiv1.onStreamChanged)
+		v1.POST("/streams/:userId", apiv1.onStreamChanged)
 		v1.POST("/follows", apiv1.onUserFollows)
 	}
 
