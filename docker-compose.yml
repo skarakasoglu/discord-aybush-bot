@@ -14,8 +14,7 @@ services:
       discordAccessToken: discord_access_token
       twitchClientId: twitch_client_id
       twitchClientSecret: twitch_client_secret
-      twitchAuthorizationCode: twitch_authorization_code
-      twitchRedirectUri: https://1.2.3.4:5
+      twitchRefreshToken: twitch_authorization_code
       dbIpAddress: 1.2.3.4
       dbPort: 5432
       dbUsername: db_username
