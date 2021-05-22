@@ -22,5 +22,7 @@ services:
       dbPassword: db_password
       dbName: db_name
       webhookHubSecret: very_secret
+      GIN_MODE: debug
+      PORT: 8090
     ports:
-    - "8080:8080"
+    - "8090:8090"
