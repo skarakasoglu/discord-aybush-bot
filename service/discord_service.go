@@ -59,7 +59,7 @@ func (d DiscordService) DeleteDiscordLevel(level int) (bool error) {
 }
 
 func (d DiscordService) InsertDiscordMember(member models.DiscordMember) (int, error) {
-	query := `INSERT INTO "discord_members"("member_id","username","discriminator","is_verified","is_bot","joined_at","is_left","guild_id") 
+	query := `INSERT INTO "discord_members"("member_id","email","username","discriminator","is_verified","is_bot","joined_at","is_left","guild_id") 
 				VALUES($1,$2,$3,$4,$5,$6,$7,$8) 
 				ON CONFLICT(member_id) DO UPDATE SET 
 				    username = excluded.username, discriminator = excluded.discriminator, is_verified = excluded.is_verified
@@ -73,7 +73,7 @@ func (d DiscordService) InsertDiscordMember(member models.DiscordMember) (int, e
 	}
 
 	lastInsertedId := 0
-	err = preparedStmt.QueryRow(member.MemberId, member.Username, member.Discriminator, member.IsVerified, member.IsBot, member.JoinedAt, member.Left, member.GuildId).Scan(&lastInsertedId)
+	err = preparedStmt.QueryRow(member.MemberId, member.Email, member.Username, member.Discriminator, member.IsVerified, member.IsBot, member.JoinedAt, member.Left, member.GuildId).Scan(&lastInsertedId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return lastInsertedId, err
@@ -183,8 +183,15 @@ func (d DiscordService) GetAllDiscordMemberLevels() ([]models.DiscordMemberLevel
 		var member models.DiscordMember
 
 
-		rows.Scan(&memberLevel.Id, &memberLevel.ExperiencePoints, &memberLevel.LastMessageTimestamp, &member.Id, &member.MemberId, &member.Email,
+		var email sql.NullString
+		err = rows.Scan(&memberLevel.Id, &memberLevel.ExperiencePoints, &memberLevel.LastMessageTimestamp, &member.Id, &member.MemberId, &email,
 			&member.Username, &member.Discriminator, &member.IsVerified, &member.IsBot, &member.JoinedAt, &member.Left, &member.GuildId)
+		member.Email = email.String
+
+		if err != nil {
+			log.Printf("[DiscordService] Error on scanning the row: %v", err)
+		}
+
 		memberLevel.DiscordMember = member
 
 		memberLevels = append(memberLevels, memberLevel)

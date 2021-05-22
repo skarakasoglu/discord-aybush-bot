@@ -16,9 +16,9 @@ type cachedMemberMessages struct {
 	messages []*discordgo.Message
 }
 
-type cachedChanMessage struct{
-	index int
+type cachedMessageDelete struct{
 	*cachedMemberMessages
+	messageToDelete *discordgo.Message
 }
 
 type AntiSpam struct{
@@ -28,7 +28,7 @@ type AntiSpam struct{
 	cachedMessages map[string]guildMessages
 
 	onMessageChan chan *discordgo.Message
-	cachedMessageChan chan *cachedChanMessage
+	cachedMessageChan chan *cachedMessageDelete
 }
 
 func NewAntiSpam(maxInterval int, maxDuplicatesInterval int,
@@ -43,7 +43,7 @@ func NewAntiSpam(maxInterval int, maxDuplicatesInterval int,
 		},
 		cachedMessages: make(map[string]guildMessages),
 		onMessageChan: make(chan *discordgo.Message, 1000),
-		cachedMessageChan: make(chan *cachedChanMessage, 1000),
+		cachedMessageChan: make(chan *cachedMessageDelete, 1000),
 	}
 }
 
@@ -71,7 +71,12 @@ func (antiSpam *AntiSpam) workAsync() {
 		case message := <- antiSpam.onMessageChan:
 			antiSpam.messageReceived(message)
 		case cachedMessage := <- antiSpam.cachedMessageChan:
-			cachedMessage.messages = append(cachedMessage.messages[:cachedMessage.index], cachedMessage.messages[cachedMessage.index + 1:]...)
+			for i, val := range cachedMessage.messages {
+				if val.Content == cachedMessage.messageToDelete.Content {
+					cachedMessage.messages = append(cachedMessage.messages[:i], cachedMessage.messages[i + 1:]...)
+					break
+				}
+			}
 		}
 	}
 }
@@ -94,16 +99,15 @@ func (antiSpam *AntiSpam) messageReceived(message *discordgo.Message) {
 	memberMessages, _ := antiSpam.cachedMessages[message.GuildID][message.Author.ID]
 
 	memberMessages.messages = append(memberMessages.messages, message)
-	messageIndex := len(memberMessages.messages) - 1
 
 	// Delete cached messages after a certain amount of time.
-	go func(index int) {
+	go func(message *discordgo.Message) {
 		time.Sleep(time.Duration(MAX_CACHE_DURATION) * time.Second)
-		antiSpam.cachedMessageChan <- &cachedChanMessage{
-			index:    index,
+		antiSpam.cachedMessageChan <- &cachedMessageDelete{
 			cachedMemberMessages: memberMessages,
+			messageToDelete:      message,
 		}
-	}(messageIndex)
+	}(message)
 
 	for _, protection := range antiSpam.protectionConfigurations {
 		var spamMatches []*discordgo.Message

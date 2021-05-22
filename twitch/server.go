@@ -46,9 +46,9 @@ func (srv *server) Start() error {
 	v1 := twitchApi.Group("/v1")
 	{
 		v1.GET("/streams/:userId", apiv1.onSubscriptionValidated)
-		v1.GET("/follows", apiv1.onSubscriptionValidated)
+		v1.GET("/follows/:userId", apiv1.onSubscriptionValidated)
 		v1.POST("/streams/:userId", apiv1.onStreamChanged)
-		v1.POST("/follows", apiv1.onUserFollows)
+		v1.POST("/follows/:userId", apiv1.onUserFollows)
 	}
 
 	err := router.Run(fmt.Sprintf("%v:%v", srv.address, srv.port))

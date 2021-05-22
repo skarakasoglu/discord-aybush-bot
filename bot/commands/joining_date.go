@@ -28,7 +28,7 @@ func (cmd *joiningDateCommand) Execute(message *discordgo.Message) (string, erro
 	if len(arguments) < 1 {
 		joinedAt, err := message.Member.JoinedAt.Parse()
 		if err != nil {
-			log.Printf("Error on parsing timestamp data: %v", err)
+			log.Printf("[AybushBot] Error on parsing timestamp data: %v", err)
 			return "", err
 		}
 
@@ -57,13 +57,13 @@ func (cmd *joiningDateCommand) Execute(message *discordgo.Message) (string, erro
 
 	member, err := cmd.session.GuildMember(message.GuildID, message.Mentions[0].ID)
 	if err != nil {
-		log.Printf("Error on obtaining guild member: %v", err)
+		log.Printf("[AybushBot] Error on obtaining guild member: %v", err)
 		return "", err
 	}
 
 	joinedAt, err := member.JoinedAt.Parse()
 	if err != nil {
-		log.Printf("Error on parsing timestamp data: %v", err)
+		log.Printf("[AybushBot] Error on parsing timestamp data: %v", err)
 		return "", err
 	}
 

@@ -123,7 +123,7 @@ func (cmd *RockPaperScissorsCommand) Name() string {
 
 func (cmd *RockPaperScissorsCommand) Execute(message *discordgo.Message) (string, error) {
 	if message.ChannelID != configuration.Manager.Channels.Aybus {
-		log.Printf("%v command is received in wrong channel. User: %v#%v, channel: %v", cmd.Name(),
+		log.Printf("[AybushBot::RockPaperScissors] %v command is received in wrong channel. User: %v#%v, channel: %v", cmd.Name(),
 			message.Author.Username, message.Author.Discriminator, message.ChannelID)
 		return "", nil
 	}
@@ -146,34 +146,34 @@ func (cmd *RockPaperScissorsCommand) Execute(message *discordgo.Message) (string
 	awayUsername := fmt.Sprintf("%v#%v", awayPlayer.Username, awayPlayer.Discriminator)
 	hostAvatar, err := cmd.session.UserAvatarDecode(hostPlayer)
 	if err != nil {
-		log.Printf("Error on obtaining host player avatar: %v", err)
+		log.Printf("[AybushBot::RockPaperScissors] Error on obtaining host player avatar: %v", err)
 		file, err := os.Open(fmt.Sprintf("%v/%v", configuration.Manager.BaseImagePath,
 			configuration.Manager.RockPaperScissors.DefaultAvatar))
 		if err != nil {
-			log.Printf("Error on opening default discord avatar file: %v", err)
+			log.Printf("[AybushBot::RockPaperScissors] Error on opening default discord avatar file: %v", err)
 			return "", err
 		}
 
 		hostAvatar, _, err = image.Decode(file)
 		if err != nil {
-			log.Printf("Error on decoding image file: %v", err)
+			log.Printf("[AybushBot::RockPaperScissors] Error on decoding image file: %v", err)
 			return "", err
 		}
 	}
 
 	awayAvatar, err := cmd.session.UserAvatarDecode(awayPlayer)
 	if err != nil {
-		log.Printf("Error on obtaining away player avatar: %v", err)
+		log.Printf("[AybushBot::RockPaperScissors] Error on obtaining away player avatar: %v", err)
 		file, err := os.Open(fmt.Sprintf("%v/%v", configuration.Manager.BaseImagePath,
 			configuration.Manager.RockPaperScissors.DefaultAvatar))
 		if err != nil {
-			log.Printf("Error on opening default discord avatar file: %v", err)
+			log.Printf("[AybushBot::RockPaperScissors] Error on opening default discord avatar file: %v", err)
 			return "", err
 		}
 
 		awayAvatar, _, err = image.Decode(file)
 		if err != nil {
-			log.Printf("Error on decoding image file: %v", err)
+			log.Printf("[AybushBot::RockPaperScissors] Error on decoding image file: %v", err)
 			return "", err
 		}
 	}
@@ -199,7 +199,7 @@ func (cmd *RockPaperScissorsCommand) Execute(message *discordgo.Message) (string
 		}
 	}
 
-	log.Printf("Rock-Paper-Scissors was played. Host: %v#%v %v, Away: %v#%v %v, Winner: %v",
+	log.Printf("[AybushBot::RockPaperScissors] Rock-Paper-Scissors was played. Host: %v#%v %v, Away: %v#%v %v, Winner: %v",
 		hostPlayer.Username, hostPlayer.Discriminator, chosenGameResult[host],
 		awayPlayer.Username, awayPlayer.Discriminator, chosenGameResult[away],
 		winner.String())
@@ -253,20 +253,20 @@ func (cmd *RockPaperScissorsCommand) Execute(message *discordgo.Message) (string
 
 	resultImg, err := cmd.createResultImage(params)
 	if err != nil {
-		log.Printf("Error on creating image: %v", err)
+		log.Printf("[AybushBot::RockPaperScissors] Error on creating image: %v", err)
 		return "", err
 	}
 
 	imageBuffer := new(bytes.Buffer)
 	err = jpeg.Encode(imageBuffer, resultImg, nil)
 	if err != nil {
-		log.Printf("Error on writing image to buffer: %v", err)
+		log.Printf("[AybushBot::RockPaperScissors] Error on writing image to buffer: %v", err)
 		return "", err
 	}
 
 	_, err = cmd.session.ChannelFileSend(message.ChannelID, "oyun_sonucu.png", imageBuffer)
 	if err != nil {
-		log.Printf("Error on sending file to channel: %v", err)
+		log.Printf("[AybushBot::RockPaperScissors] Error on sending file to channel: %v", err)
 		return "", err
 	}
 
@@ -284,7 +284,7 @@ func (cmd *RockPaperScissorsCommand) createResultImage(params resultImageParams)
 
 	backgroundImage, err := gg.LoadImage(params.BackgroundImagePath)
 	if err != nil {
-		log.Printf("Error on loading image: %v" ,err)
+		log.Printf("[AybushBot::RockPaperScissors] Error on loading image: %v" ,err)
 		return nil, err
 	}
 
@@ -293,7 +293,7 @@ func (cmd *RockPaperScissorsCommand) createResultImage(params resultImageParams)
 
 	hostElement, err := gg.LoadImage(params.HostParams.element)
 	if err != nil {
-		log.Printf("Error on loading host element image: %v", err)
+		log.Printf("[AybushBot::RockPaperScissors] Error on loading host element image: %v", err)
 		return nil, err
 	}
 
@@ -302,7 +302,7 @@ func (cmd *RockPaperScissorsCommand) createResultImage(params resultImageParams)
 
 	awayElement, err := gg.LoadImage(params.AwayParams.element)
 	if err != nil {
-		log.Printf("Error on loading away element image: %v", err)
+		log.Printf("[AybushBot::RockPaperScissors] Error on loading away element image: %v", err)
 		return nil, err
 	}
 
@@ -313,7 +313,7 @@ func (cmd *RockPaperScissorsCommand) createResultImage(params resultImageParams)
 	imageContext.SetRGB(params.Configuration.fontR, params.Configuration.fontG, params.Configuration.fontB)
 	err = imageContext.LoadFontFace("fonts/Roboto-Medium.ttf", params.Configuration.fontSize)
 	if err != nil {
-		log.Printf("Error on loading font: %v", err)
+		log.Printf("[AybushBot::RockPaperScissors] Error on loading font: %v", err)
 	}
 
 	imageContext.DrawString(params.HostParams.username, params.HostParams.usernameX, params.HostParams.usernameY)

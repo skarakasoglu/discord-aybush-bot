@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"log"
 )
 
 type rankCommand struct{
@@ -17,6 +18,7 @@ func (cmd *rankCommand) Name() string{
 }
 
 func (cmd *rankCommand) Execute(message *discordgo.Message) (string, error) {
+	log.Printf("[AybushBot::Rank] User queried rank. MemberId: %v, Username: %v#%v", message.Author.ID, message.Author.Username, message.Author.Discriminator)
 	cmd.onRank(message.Author)
 	return "", nil
 }

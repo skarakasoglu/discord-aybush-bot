@@ -137,17 +137,19 @@ func (api *apiV1) onUserFollows(ctx *gin.Context) {
 		return
 	}
 
+	userId := ctx.Param("userId")
+
 	notificationId := ctx.GetHeader("Twitch-Notification-Id")
 	_, ok := api.receivedNotifications[notificationId]
 	if ok {
-		log.Printf("[TwitchWebhookAPI] Duplicate userFollows notification received from twitch: %v", notificationId)
+		log.Printf("[TwitchWebhookAPI] UserId: %v, Duplicate userFollows notification received from twitch: %v", userId, notificationId)
 	} else {
 		api.receivedNotifications[notificationId] = notificationId
 		if len(followPayload.Data) < 1 {
 			log.Printf("[TwitchWebhookAPI] User follow end point called but no data found.")
 		} else {
 			followInfo := followPayload.Data[0]
-			log.Printf("[TwitchWebhookAPI] NotificationId: %v User follows end point called: %v", notificationId, followInfo)
+			log.Printf("[TwitchWebhookAPI] NotificationId: %v, UserId: %v User follows end point called: %v", notificationId, userId, followInfo)
 			api.userFollowsChan <- followInfo
 		}
 	}

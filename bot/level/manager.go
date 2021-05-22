@@ -155,6 +155,10 @@ func (m *Manager) Start() {
 	go m.workAsync()
 }
 
+func (m *Manager) Stop() {
+	m.running = false
+}
+
 func (m *Manager) loadDiscordLevels() {
 	var err error
 	m.levels, err = m.discordRepository.GetAllDiscordLevels()
@@ -177,50 +181,58 @@ func (m *Manager) loadDiscordMemberLevels() {
 		log.Printf("[AybushBot::LevelManager] Error on fetching all member levels: %v", err)
 	}
 
-	m.memberLevelStatusMtx.Lock()
-	m.orderedMemberLevelStatusMtx.Lock()
-
-	defer m.memberLevelStatusMtx.Unlock()
-	defer m.orderedMemberLevelStatusMtx.Unlock()
+	var wg sync.WaitGroup
 
 	for _, memberLevel := range memberLevels {
-		log.Printf("[AybushBot::LevelManager] MemberLevelStatusId: %v, MemberId: %v, GuildId: %v, Username: %v#%v, Exp: %v", memberLevel.Id, memberLevel.MemberId,
-			memberLevel.GuildId, memberLevel.Username, memberLevel.Discriminator, memberLevel.ExperiencePoints)
-		var memberLevelStatus MemberLevelStatus
-		memberLevelStatus.DiscordMemberLevel = memberLevel
+		wg.Add(1)
 
-		member, err := m.session.GuildMember(memberLevel.GuildId, memberLevel.MemberId)
-		if err != nil {
-			log.Printf("[AybushBot::LevelManager] Error on obtaining member: %v", err)
-			continue
-		}
-		memberLevelStatus.Member = member
+		go func(memberLevelParam models.DiscordMemberLevel, wg *sync.WaitGroup) {
+			log.Printf("[AybushBot::LevelManager] MemberLevelStatusId: %v, MemberId: %v, GuildId: %v, Username: %v#%v, Exp: %v", memberLevelParam.Id, memberLevelParam.MemberId,
+				memberLevelParam.GuildId, memberLevelParam.Username, memberLevelParam.Discriminator, memberLevelParam.ExperiencePoints)
+			var memberLevelStatus MemberLevelStatus
+			memberLevelStatus.DiscordMemberLevel = memberLevelParam
 
-		for _, level := range m.levels {
-			if memberLevelStatus.DiscordMemberLevel.ExperiencePoints > level.RequiredExperiencePoints {
-				memberLevelStatus.CurrentLevel = level
-				continue
-			} else if memberLevelStatus.DiscordMemberLevel.ExperiencePoints < level.RequiredExperiencePoints {
-				memberLevelStatus.NextLevel = level
-				break
+			member, err := m.session.GuildMember(memberLevelParam.GuildId, memberLevelParam.MemberId)
+			if err != nil {
+				log.Printf("[AybushBot::LevelManager] Error on obtaining member: %v", err)
+				return
 			}
-		}
+			memberLevelStatus.Member = member
 
-		userRole := m.levels[memberLevelStatus.CurrentLevel.Id].DiscordRole
-		err = m.session.GuildMemberRoleAdd(memberLevelStatus.GuildId, memberLevelStatus.MemberId, userRole.RoleId)
-		if err != nil {
-			log.Printf("[AybushBot::LevelManager] Error on assigning role to member: %v", err)
-		}
+			for _, level := range m.levels {
+				if memberLevelStatus.DiscordMemberLevel.ExperiencePoints > level.RequiredExperiencePoints {
+					memberLevelStatus.CurrentLevel = level
+					continue
+				} else if memberLevelStatus.DiscordMemberLevel.ExperiencePoints < level.RequiredExperiencePoints {
+					memberLevelStatus.NextLevel = level
+					break
+				}
+			}
 
-		m.memberLevelStatuses[memberLevelStatus.MemberId] = &memberLevelStatus
-		m.orderedMemberLevelStatuses = append(m.orderedMemberLevelStatuses, &memberLevelStatus)
+			userRole := m.levels[memberLevelStatus.CurrentLevel.Id].DiscordRole
+			err = m.session.GuildMemberRoleAdd(memberLevelStatus.GuildId, memberLevelStatus.MemberId, userRole.RoleId)
+			if err != nil {
+				log.Printf("[AybushBot::LevelManager] Error on assigning role to member: %v", err)
+			}
+
+			m.memberLevelStatusMtx.Lock()
+			m.memberLevelStatuses[memberLevelStatus.MemberId] = &memberLevelStatus
+			m.memberLevelStatusMtx.Unlock()
+
+			m.orderedMemberLevelStatusMtx.Lock()
+			m.orderedMemberLevelStatuses = append(m.orderedMemberLevelStatuses, &memberLevelStatus)
+			m.orderedMemberLevelStatusMtx.Unlock()
+
+			wg.Done()
+		}(memberLevel, &wg)
+
 	}
 
-	sort.Sort(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses))
-}
+	wg.Wait()
 
-func (m *Manager) Stop() {
-	m.running = false
+	m.orderedMemberLevelStatusMtx.Lock()
+	sort.Sort(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses))
+	m.orderedMemberLevelStatusMtx.Unlock()
 }
 
 func (m *Manager) giveExperienceActiveVoiceUsers() {

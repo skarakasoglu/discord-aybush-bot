@@ -50,7 +50,7 @@ func (cmd *clearMessagesCommand) Execute(message *discordgo.Message) (string, er
 
 	messageCount, err := strconv.Atoi(arguments[0])
 	if err != nil {
-		log.Printf("Invalid clear command argument, expected integer: %v", err)
+		log.Printf("[AybushBot::ClearMessages] Invalid clear command argument, expected integer: %v", err)
 		return fmt.Sprintf("<@%v>, %v", message.Author.ID, cmd.Usage()) ,nil
 	}
 
@@ -60,7 +60,7 @@ func (cmd *clearMessagesCommand) Execute(message *discordgo.Message) (string, er
 
 	messages, err := cmd.session.ChannelMessages(message.ChannelID, messageCount, "", "", "")
 	if err != nil {
-		log.Printf("Error on fetching channel messages: %v", err)
+		log.Printf("[AybushBot::ClearMessages] Error on fetching channel messages: %v", err)
 		return "", err
 	}
 
@@ -72,10 +72,10 @@ func (cmd *clearMessagesCommand) Execute(message *discordgo.Message) (string, er
 
 	err = cmd.session.ChannelMessagesBulkDelete(message.ChannelID, messageIds)
 	if err != nil {
-		log.Printf("Error on bulk deleting messages: %v", err)
+		log.Printf("[AybushBot::ClearMessages] Error on bulk deleting messages: %v", err)
 		return "", err
 	}
-	log.Printf("%v#%v deleted %v messages in channel %v.", message.Author.Username, message.Author.Discriminator, messageCount, message.ChannelID)
+	log.Printf("[AybushBot::ClearMessages] %v#%v deleted %v messages in channel %v.", message.Author.Username, message.Author.Discriminator, messageCount, message.ChannelID)
 
 	embedBotLogMsg := embed.NewGenericEmbed("Moderasyon İşlemi", "")
 	embedBotLogMsg.Color = 0xF97100
@@ -107,7 +107,7 @@ func (cmd *clearMessagesCommand) Execute(message *discordgo.Message) (string, er
 
 	_, err = cmd.session.ChannelMessageSendEmbed(configuration.Manager.Channels.BotLog, embedBotLogMsg)
 	if err != nil {
-		log.Printf("Error on writing lot go bot log channel: %v", err)
+		log.Printf("[AybushBot::ClearMessages] Error on writing lot go bot log channel: %v", err)
 	}
 
 	return fmt.Sprintf("%v adet mesaj temizlendi.", messageCount), nil
