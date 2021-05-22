@@ -30,7 +30,6 @@ func NewServer(apiClient *ApiClient,
 }
 
 func (srv *server) Start() error {
-	gin.SetMode(gin.EnvGinMode)
 	router := gin.Default()
 
 	apiv1 := NewApiV1(srv.apiClient, srv.userFollowsChan, srv.streamChangedChan)
