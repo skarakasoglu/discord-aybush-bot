@@ -31,7 +31,8 @@ func (d DiscordService) UpdateDiscordLevel(level models.DiscordLevel) (bool, err
 }
 
 func (d DiscordService) GetAllDiscordLevels() ([]models.DiscordLevel, error) {
-	query := `SELECT dl.id "level_id", dl.required_experience_points, dr.id "d_role_id", dr.role_id, dr.name FROM "discord_levels" as dl left join "discord_roles" as dr on dl.role_id = dr.role_id order by dl.id;`
+	query := `SELECT dl.id "level_id", dl.required_experience_points, dl.maximum_experience_points, dr.id "d_role_id", dr.role_id, dr.name 
+				FROM "discord_levels" as dl left join "discord_roles" as dr on dl.role_id = dr.role_id order by dl.id;`
 
 	rows, err := d.db.Query(query)
 	if err != nil {
@@ -45,7 +46,7 @@ func (d DiscordService) GetAllDiscordLevels() ([]models.DiscordLevel, error) {
 		var level models.DiscordLevel
 		var role models.DiscordRole
 
-		_ = rows.Scan(&level.Id, &level.RequiredExperiencePoints, &role.Id, &role.RoleId, &role.Name)
+		_ = rows.Scan(&level.Id, &level.RequiredExperiencePoints, &level.MaximumExperiencePoints, &role.Id, &role.RoleId, &role.Name)
 		level.DiscordRole = role
 
 		levels = append(levels, level)
@@ -165,9 +166,17 @@ func (d DiscordService) UpdateDiscordMemberLevelById(level models.DiscordMemberL
 
 func (d DiscordService) GetAllDiscordMemberLevels() ([]models.DiscordMemberLevel, error) {
 	query := `
-			select dml.id "dml_id", dml.experience_points, dml.last_message_timestamp, 
-			dm.id "dm_id", dm.member_id, dm.email, dm.username, dm.discriminator, dm.is_verified, dm.is_bot, dm.joined_at, dm.is_left, dm.guild_id
-			from "discord_member_levels" as dml join "discord_members" as dm on dml.member_id = dm.member_id;
+			SELECT dml.id, dm.username, dm.discriminator, dml.experience_points, dml.last_message_timestamp, dm.member_id, dm.guild_id,
+			cdl.id "current_level",  cdl.required_experience_points "current_level_required", cdl.maximum_experience_points "current_level_maximum", 
+			cdr.id "current_role_id", cdr.role_id "current_role_role_id", cdr.name "current_role_name",
+			ndl.id "next_level", ndl.required_experience_points "next_level_required", ndl.maximum_experience_points "next_level_maximum",
+			ndr.id "next_role_id", ndr.role_id "next_role_role_id", ndr.name "next_role_name"
+			FROM "discord_member_levels" as dml 
+			inner join "discord_members" as dm on dm.member_id = dml.member_id
+			inner join "discord_levels" as cdl on dml.experience_points between cdl.required_experience_points and cdl.maximum_experience_points
+			inner join "discord_levels" as ndl on cdl.maximum_experience_points = ndl.required_experience_points
+			inner join "discord_roles" as cdr on cdr.role_id = cdl.role_id
+			inner join "discord_roles" as ndr on ndr.role_id = ndl.role_id;
 	`
 
 	rows, err := d.db.Query(query)
@@ -181,18 +190,22 @@ func (d DiscordService) GetAllDiscordMemberLevels() ([]models.DiscordMemberLevel
 	for rows.Next() {
 		var memberLevel models.DiscordMemberLevel
 		var member models.DiscordMember
+		var currentLevel models.DiscordLevel
+		var nextLevel models.DiscordLevel
 
-
-		var email sql.NullString
-		err = rows.Scan(&memberLevel.Id, &memberLevel.ExperiencePoints, &memberLevel.LastMessageTimestamp, &member.Id, &member.MemberId, &email,
-			&member.Username, &member.Discriminator, &member.IsVerified, &member.IsBot, &member.JoinedAt, &member.Left, &member.GuildId)
-		member.Email = email.String
+		err = rows.Scan(&memberLevel.Id, &member.Username, &member.Discriminator, &memberLevel.ExperiencePoints, &memberLevel.LastMessageTimestamp, &member.MemberId,
+			&member.GuildId, &currentLevel.Id, &currentLevel.RequiredExperiencePoints, &currentLevel.MaximumExperiencePoints,
+			&currentLevel.DiscordRole.Id, &currentLevel.DiscordRole.RoleId, &currentLevel.DiscordRole.Name,
+			&nextLevel.Id, &nextLevel.RequiredExperiencePoints, &nextLevel.MaximumExperiencePoints,
+			&nextLevel.DiscordRole.Id, &nextLevel.DiscordRole.RoleId, &nextLevel.DiscordRole.Name)
 
 		if err != nil {
 			log.Printf("[DiscordService] Error on scanning the row: %v", err)
 		}
 
 		memberLevel.DiscordMember = member
+		memberLevel.CurrentLevel = currentLevel
+		memberLevel.NextLevel = nextLevel
 
 		memberLevels = append(memberLevels, memberLevel)
 	}

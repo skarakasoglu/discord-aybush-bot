@@ -183,12 +183,14 @@ func (m *Manager) loadDiscordMemberLevels() {
 
 	var wg sync.WaitGroup
 
+	log.Println("[AybushBot:::LevelManager] Discord member levels are being initialized.")
 	for _, memberLevel := range memberLevels {
 		wg.Add(1)
-
-		go func(memberLevelParam models.DiscordMemberLevel, wg *sync.WaitGroup) {
-			log.Printf("[AybushBot::LevelManager] MemberLevelStatusId: %v, MemberId: %v, GuildId: %v, Username: %v#%v, Exp: %v", memberLevelParam.Id, memberLevelParam.MemberId,
-				memberLevelParam.GuildId, memberLevelParam.Username, memberLevelParam.Discriminator, memberLevelParam.ExperiencePoints)
+		go func(memberLevelParam models.DiscordMemberLevel) {
+			log.Printf("[AybushBot::LevelManager] MemberLevelStatusId: %v, MemberId: %v, GuildId: %v, Username: %v#%v, Exp: %v, CurrentLevel: %v, NextLevel: %v",
+				memberLevelParam.Id, memberLevelParam.MemberId,
+				memberLevelParam.GuildId, memberLevelParam.Username, memberLevelParam.Discriminator, memberLevelParam.ExperiencePoints,
+				memberLevelParam.CurrentLevel, memberLevelParam.NextLevel)
 			var memberLevelStatus MemberLevelStatus
 			memberLevelStatus.DiscordMemberLevel = memberLevelParam
 
@@ -198,16 +200,8 @@ func (m *Manager) loadDiscordMemberLevels() {
 				return
 			}
 			memberLevelStatus.Member = member
-
-			for _, level := range m.levels {
-				if memberLevelStatus.DiscordMemberLevel.ExperiencePoints > level.RequiredExperiencePoints {
-					memberLevelStatus.CurrentLevel = level
-					continue
-				} else if memberLevelStatus.DiscordMemberLevel.ExperiencePoints < level.RequiredExperiencePoints {
-					memberLevelStatus.NextLevel = level
-					break
-				}
-			}
+			memberLevelStatus.CurrentLevel = memberLevelParam.CurrentLevel
+			memberLevelStatus.NextLevel = memberLevelParam.NextLevel
 
 			userRole := m.levels[memberLevelStatus.CurrentLevel.Id].DiscordRole
 			err = m.session.GuildMemberRoleAdd(memberLevelStatus.GuildId, memberLevelStatus.MemberId, userRole.RoleId)
@@ -222,17 +216,15 @@ func (m *Manager) loadDiscordMemberLevels() {
 			m.orderedMemberLevelStatusMtx.Lock()
 			m.orderedMemberLevelStatuses = append(m.orderedMemberLevelStatuses, &memberLevelStatus)
 			m.orderedMemberLevelStatusMtx.Unlock()
-
-			wg.Done()
-		}(memberLevel, &wg)
-
+		}(memberLevel)
 	}
-
 	wg.Wait()
 
 	m.orderedMemberLevelStatusMtx.Lock()
-	sort.Sort(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses))
+	sort.Sort(sort.Reverse(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses)))
 	m.orderedMemberLevelStatusMtx.Unlock()
+
+	log.Println("[AybushBot:::LevelManager] Discord member levels were initialized successfully.")
 }
 
 func (m *Manager) giveExperienceActiveVoiceUsers() {
@@ -403,7 +395,7 @@ func (m *Manager) earnExperience(status *MemberLevelStatus, expType ExpType) {
 	}
 
 	m.orderedMemberLevelStatusMtx.Lock()
-	sort.Sort(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses))
+	sort.Sort(sort.Reverse(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses)))
 	m.orderedMemberLevelStatusMtx.Unlock()
 
 	log.Printf("[AybushBot::LevelManager] ExperienceType: %v, MemberId: %v, Username: %v#%v, EarnedExp: %v, CurrentLevel: %v, Exp: %v, NextLevel: %v, RequiredExp: %v", expType.String(),
@@ -511,7 +503,7 @@ func (m *Manager) createMemberLevel(memberId string, timestamp time.Time) (*Memb
 
 	m.orderedMemberLevelStatusMtx.Lock()
 	m.orderedMemberLevelStatuses = append(m.orderedMemberLevelStatuses, memberLevelStatus)
-	sort.Sort(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses))
+	sort.Sort(sort.Reverse(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses)))
 	m.orderedMemberLevelStatusMtx.Unlock()
 
 
@@ -536,7 +528,7 @@ func (m *Manager) rankQueried(user *discordgo.User) error {
 	var currentRank int
 	for i, val := range m.orderedMemberLevelStatuses {
 		if val.Id == status.Id {
-			currentRank = len(m.orderedMemberLevelStatuses) - i
+			currentRank = i + 1
 			break
 		}
 	}
