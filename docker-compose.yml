@@ -1,12 +1,12 @@
 version: '3.8'
 services:
   aybush_bot:
-    container_name: DiscordAybushBot
+    container_name: AybushBot
     build: .
     image: aybush-bot:1.0.0
     restart: always
     environment:
-      applicationMode: Test
+      applicationMode: Release
       applicationName: "Aybush Bot"
       executablePath: bin
       executableName: AybushBot
