@@ -216,6 +216,8 @@ func (m *Manager) loadDiscordMemberLevels() {
 			m.orderedMemberLevelStatusMtx.Lock()
 			m.orderedMemberLevelStatuses = append(m.orderedMemberLevelStatuses, &memberLevelStatus)
 			m.orderedMemberLevelStatusMtx.Unlock()
+
+			wg.Done()
 		}(memberLevel)
 	}
 	wg.Wait()
