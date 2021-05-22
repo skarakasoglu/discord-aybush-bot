@@ -1,9 +1,9 @@
 version: '3.8'
 services:
-  aybushbot_test:
+  aybush_bot:
     container_name: DiscordAybushBot
     build: .
-    image: discord-aybush-bot:2.0.0
+    image: discord-aybush-bot:1.0.0
     restart: always
     environment:
       applicationMode: Test
@@ -14,7 +14,7 @@ services:
       discordAccessToken: discord_access_token
       twitchClientId: twitch_client_id
       twitchClientSecret: twitch_client_secret
-      twitchRefreshToken: twitch_authorization_code
+      twitchRefreshToken: twitch_refresh_token
       dbIpAddress: 1.2.3.4
       dbPort: 5432
       dbUsername: db_username

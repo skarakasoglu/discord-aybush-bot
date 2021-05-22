@@ -105,8 +105,8 @@ func (a*Aybush) Start() {
 	a.discordConnection.AddHandler(a.onChannelDelete)
 
 	a.antiSpam.Start()
-	a.levelManager.Start()
 
+	go a.levelManager.Start()
 	go a.updatePresence()
 	go a.receiveStreamChanges()
 	go a.receiveUserFollows()
