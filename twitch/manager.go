@@ -2,7 +2,6 @@ package twitch
 
 import (
 	"fmt"
-	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"github.com/skarakasoglu/discord-aybush-bot/repository"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
@@ -67,8 +66,7 @@ func (man *Manager) Start() error {
 	man.chatBot = NewChatBot("aybushbot", man.apiClient.userAccessToken, man.streamer, man.apiClient, man.twitchRepository)
 	man.chatBot.Start()
 
-	srv := NewServer(configuration.Manager.TwitchApi.Address, configuration.Manager.TwitchApi.Port,
-		man.apiClient,
+	srv := NewServer(man.apiClient,
 		man.userFollowsChan, man.streamChangedChan)
 	go func () {
 		err := srv.Start()
