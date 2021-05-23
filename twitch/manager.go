@@ -2,7 +2,6 @@ package twitch
 
 import (
 	"fmt"
-	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"github.com/skarakasoglu/discord-aybush-bot/repository"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
@@ -24,8 +23,7 @@ type Manager struct{
 
 	clientSecret string
 	clientId string
-	authorizationCode string
-	redirectUri string
+	userRefreshToken string
 
 	apiClient *ApiClient
 	chatBot *ChatBot
@@ -37,7 +35,7 @@ type Manager struct{
 	twitchRepository repository.TwitchRepository
 }
 
-func NewManager(streamerUsername string, clientSecret string, clientID string, authorizationCode string, redirectUri string,
+func NewManager(streamerUsername string, clientSecret string, clientID string, userRefreshToken string,
 	userFollowsChan chan<- payloads.UserFollows,
 	streamChangedChan chan<- messages.StreamChanged, hubSecretP string, baseApiURL string, twitchRepository repository.TwitchRepository) *Manager{
 	hubSecret = hubSecretP
@@ -47,13 +45,12 @@ func NewManager(streamerUsername string, clientSecret string, clientID string, a
 		streamer: payloads.User{Login: streamerUsername},
 		clientSecret: clientSecret,
 		clientId: clientID,
-		authorizationCode: authorizationCode,
-		redirectUri: redirectUri,
+		userRefreshToken: userRefreshToken,
 		userFollowsChan: userFollowsChan,
 		streamChangedChan: streamChangedChan,
 		running: false,
 		twitchRepository: twitchRepository,
-		apiClient: NewApiClient(clientID, clientSecret, authorizationCode, redirectUri),
+		apiClient: NewApiClient(clientID, clientSecret, userRefreshToken),
 	}
 }
 
@@ -69,8 +66,7 @@ func (man *Manager) Start() error {
 	man.chatBot = NewChatBot("aybushbot", man.apiClient.userAccessToken, man.streamer, man.apiClient, man.twitchRepository)
 	man.chatBot.Start()
 
-	srv := NewServer(configuration.Manager.TwitchApi.Address, configuration.Manager.TwitchApi.Port,
-		man.apiClient,
+	srv := NewServer(man.apiClient,
 		man.userFollowsChan, man.streamChangedChan)
 	go func () {
 		err := srv.Start()

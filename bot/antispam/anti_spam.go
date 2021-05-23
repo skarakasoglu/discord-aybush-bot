@@ -3,7 +3,6 @@ package antispam
 import (
 	"github.com/bwmarrin/discordgo"
 	"log"
-	"sync"
 	"time"
 )
 
@@ -14,30 +13,22 @@ const (
 type guildMessages map[string]*cachedMemberMessages
 
 type cachedMemberMessages struct {
-	messageMtx sync.Mutex
 	messages []*discordgo.Message
 }
 
-type ProtectionConfig struct{
-	Threshold int
-	MaxDuplicates int
-	Callback func(string, string, []*discordgo.Message)
-}
-
-type options struct{
-	protectionConfigurations []ProtectionConfig
-
-	//General variables
-	maxInterval int
-	maxDuplicatesInterval int
-	exemptRoles []string
-	ignoredUsers []string
-	ignoredChannels []string
+type cachedMessageDelete struct{
+	*cachedMemberMessages
+	messageToDelete *discordgo.Message
 }
 
 type AntiSpam struct{
+	running bool
+
 	options
 	cachedMessages map[string]guildMessages
+
+	onMessageChan chan *discordgo.Message
+	cachedMessageChan chan *cachedMessageDelete
 }
 
 func NewAntiSpam(maxInterval int, maxDuplicatesInterval int,
@@ -51,6 +42,8 @@ func NewAntiSpam(maxInterval int, maxDuplicatesInterval int,
 			ignoredChannels: ignoredChannels,
 		},
 		cachedMessages: make(map[string]guildMessages),
+		onMessageChan: make(chan *discordgo.Message, 1000),
+		cachedMessageChan: make(chan *cachedMessageDelete, 1000),
 	}
 }
 
@@ -58,7 +51,37 @@ func (antiSpam *AntiSpam) AddProtectionConfig(config ProtectionConfig) {
 	antiSpam.protectionConfigurations = append(antiSpam.protectionConfigurations, config)
 }
 
+func (antiSpam *AntiSpam) Start() {
+	antiSpam.running = true
+
+	go antiSpam.workAsync()
+}
+
+func (antiSpam *AntiSpam) Stop() {
+	antiSpam.running = false
+}
+
 func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
+	antiSpam.onMessageChan <- message
+}
+
+func (antiSpam *AntiSpam) workAsync() {
+	for antiSpam.running {
+		select {
+		case message := <- antiSpam.onMessageChan:
+			antiSpam.messageReceived(message)
+		case cachedMessage := <- antiSpam.cachedMessageChan:
+			for i, val := range cachedMessage.messages {
+				if val.Content == cachedMessage.messageToDelete.Content {
+					cachedMessage.messages = append(cachedMessage.messages[:i], cachedMessage.messages[i + 1:]...)
+					break
+				}
+			}
+		}
+	}
+}
+
+func (antiSpam *AntiSpam) messageReceived(message *discordgo.Message) {
 	if antiSpam.shouldIgnore(message) {
 		return
 	}
@@ -75,29 +98,21 @@ func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
 
 	memberMessages, _ := antiSpam.cachedMessages[message.GuildID][message.Author.ID]
 
-	memberMessages.messageMtx.Lock()
 	memberMessages.messages = append(memberMessages.messages, message)
-	memberMessages.messageMtx.Unlock()
 
 	// Delete cached messages after a certain amount of time.
-	go func() {
+	go func(message *discordgo.Message) {
 		time.Sleep(time.Duration(MAX_CACHE_DURATION) * time.Second)
-
-		memberMessages.messageMtx.Lock()
-		for i, val := range memberMessages.messages {
-			if val == message {
-				memberMessages.messages = append(memberMessages.messages[:i], memberMessages.messages[i + 1:]...)
-				break
-			}
+		antiSpam.cachedMessageChan <- &cachedMessageDelete{
+			cachedMemberMessages: memberMessages,
+			messageToDelete:      message,
 		}
-		memberMessages.messageMtx.Unlock()
-	}()
+	}(message)
 
 	for _, protection := range antiSpam.protectionConfigurations {
 		var spamMatches []*discordgo.Message
 		var duplicateMatches []*discordgo.Message
 
-		memberMessages.messageMtx.Lock()
 
 		lastMessageTime, err := message.Timestamp.Parse()
 		if err != nil {
@@ -143,7 +158,6 @@ func (antiSpam *AntiSpam) OnMessage(message *discordgo.Message) {
 
 			protection.Callback(message.GuildID, message.Author.ID, spamMatches)
 		}
-		memberMessages.messageMtx.Unlock()
 	}
 }
 

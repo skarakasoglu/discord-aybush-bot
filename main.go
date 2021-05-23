@@ -23,8 +23,7 @@ var (
 	discordAccessToken string
 	twitchClientId string
 	twitchClientSecret string
-	twitchAuthorizationCode string
-	twitchRedirectUri string
+	twitchRefreshToken string
 	hubSecret string
 	baseApiAddress string
 	dbHost string
@@ -40,8 +39,7 @@ func init() {
 	flag.StringVar(&configurationFilePath, "cfg-file-path", ".", "application configuration file path")
 	flag.StringVar(&twitchClientId, "twitch-client-id", "", "twitch api client id")
 	flag.StringVar(&twitchClientSecret, "twitch-client-secret", "", "twitch api client secret to generate access token")
-	flag.StringVar(&twitchAuthorizationCode, "twitch-authorization-code", "", "twitch api authorization code to generate user access token")
-	flag.StringVar(&twitchRedirectUri, "twitch-redirect-uri", "", "twitch developer application redirect uri")
+	flag.StringVar(&twitchRefreshToken, "twitch-refresh-token", "", "twitch refresh token to regenerate access token when it expires")
 	flag.StringVar(&hubSecret, "hub-secret", "", "twitch webhook api secret")
 	flag.StringVar(&baseApiAddress, "base-api-address", "", "twitch webhook api server address")
 	flag.StringVar(&dbHost, "db-ip-address", "", "database ip address")
@@ -57,13 +55,13 @@ func init() {
 func main() {
 	dg, err := discordgo.New(fmt.Sprintf("Bot %v", discordAccessToken))
 	if err != nil {
-		log.Fatalf("Failed to create: %v", err)
+		log.Fatalf("[AybushBot] Failed to create: %v", err)
 	}
 
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAll)
 	err = dg.Open()
 	if err != nil {
-		log.Fatalf("Failed to open websocket connection with Discord API: %v", err)
+		log.Fatalf("[AybushBot] Failed to open websocket connection with Discord API: %v", err)
 	}
 
 	userFollowChan := make(chan payloads.UserFollows)
@@ -77,7 +75,7 @@ func main() {
 		DatabaseName: dbName,
 	})
 	if err != nil {
-		log.Printf("Error on creating db connection: %v", err)
+		log.Printf("[AybushBot] Error on creating db connection: %v", err)
 		return
 	}
 
@@ -88,7 +86,7 @@ func main() {
 	aybusBot := bot.New(dg, userFollowChan, streamChangedChan, discordService)
 	aybusBot.Start()
 
-	twitchWebhookManager := twitch.NewManager(streamerUsername, twitchClientSecret, twitchClientId, twitchAuthorizationCode, twitchRedirectUri, userFollowChan, streamChangedChan, hubSecret, baseApiAddress, twitchService)
+	twitchWebhookManager := twitch.NewManager(streamerUsername, twitchClientSecret, twitchClientId, twitchRefreshToken, userFollowChan, streamChangedChan, hubSecret, baseApiAddress, twitchService)
 	err = twitchWebhookManager.Start()
 
 	log.Println("AYBUSH BOT is now running. Press CTRL + C to interrupt.")
@@ -96,9 +94,9 @@ func main() {
 	signal.Notify(signalHandler, os.Interrupt, os.Kill, syscall.SIGUSR1, syscall.SIGTERM)
 	receivedSignal := <-signalHandler
 
-	log.Printf("%v signal received. Gracefully shutting down the application.", receivedSignal)
+	log.Printf("[AybushBot] %v signal received. Gracefully shutting down the application.", receivedSignal)
 	aybusBot.Stop()
 	twitchWebhookManager.Stop()
 
-	log.Printf("Application exited.")
+	log.Printf("[AybushBot] Application exited.")
 }

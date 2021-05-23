@@ -23,15 +23,14 @@ type ApiClient struct {
 	redirectUri string
 }
 
-func NewApiClient(clientId string, clientSecret string, authorizationCode string, redirectUri string) *ApiClient{
+func NewApiClient(clientId string, clientSecret string, userRefreshToken string) *ApiClient{
 	api := &ApiClient{
 		clientId:         clientId,
 		clientSecret:     clientSecret,
-		authorizationCode: authorizationCode,
-		redirectUri: redirectUri,
+		userRefreshToken: userRefreshToken,
 	}
 	api.generateAppAccessToken()
-	api.generateUserAccessToken()
+	api.refreshUserAccessToken()
 
 	return api
 }
@@ -81,6 +80,7 @@ func (api *ApiClient) refreshUserAccessToken() {
 	api.userRefreshToken = accessToken.RefreshToken
 }
 
+// DEPRECATED
 func (api *ApiClient) generateUserAccessToken() {
 	reqUrl := fmt.Sprintf("https://id.twitch.tv/oauth2/token?client_id=%v&client_secret=%v&code=%v&grant_type=authorization_code&redirect_uri=%v", api.clientId, api.clientSecret, api.authorizationCode, api.redirectUri)
 	req, err := http.NewRequest(http.MethodPost, reqUrl, nil)
@@ -180,9 +180,18 @@ func (api *ApiClient) getUserFollowage(fromId string, toId string) payloads.User
 	return followPayload.Data[0]
 }
 
+func (api *ApiClient) getUserInfoByUserId(userId string) payloads.User {
+	reqUrl := fmt.Sprintf("https://api.twitch.tv/helix/users?id=%v", userId)
+	return api.getUserInfo(reqUrl)
+}
+
 func (api *ApiClient) getUserInfoByUsername(username string) payloads.User {
-	gameReqUrl := fmt.Sprintf("https://api.twitch.tv/helix/users?login=%v", username)
-	resp, err := api.makeHttpGetRequest(gameReqUrl)
+	reqUrl := fmt.Sprintf("https://api.twitch.tv/helix/users?login=%v", username)
+	return api.getUserInfo(reqUrl)
+}
+
+func (api *ApiClient) getUserInfo(reqUrl string) payloads.User {
+	resp, err := api.makeHttpGetRequest(reqUrl)
 	if err != nil {
 		log.Printf("[TwitchApiClient] Error on making request: %v", err)
 		return payloads.User{}

@@ -21,6 +21,13 @@ var (
 	rnd = rand.New(randSrc)
 )
 
+type ReloadMessage struct{
+	ChatCommands bool
+	UserNoticeMessages bool
+	AutoBroadcastMessages bool
+	BotMessages bool
+}
+
 type ChatBot struct {
 	running bool
 
@@ -36,12 +43,17 @@ type ChatBot struct {
 	chatCommands []models.TwitchBotCommand
 	noticeEventMessages map[string]map[string]map[bool]models.TwitchBotUserNoticeMessage
 	autoBroadcastMessages []models.TwitchBotAutoBroadcastMessage
+	botMessages []models.TwitchBotMessage
 	bitMessages []models.TwitchBotMessage
 
 	streamer payloads.User
 
 	chatActive chan bool
 	lastMessageTimestamp time.Time
+
+	messageChan chan *twitchirc.PrivateMessage
+	userNoticeChan chan *twitchirc.UserNoticeMessage
+	reloadChan chan ReloadMessage
 }
 
 func NewChatBot(username string, token string, streamer payloads.User, client *ApiClient, twitchRepository repository.TwitchRepository) *ChatBot {
@@ -56,26 +68,78 @@ func NewChatBot(username string, token string, streamer payloads.User, client *A
 		twitchRepository: twitchRepository,
 		noticeEventMessages: make(map[string]map[string]map[bool]models.TwitchBotUserNoticeMessage),
 		chatActive: make(chan bool, 5),
+		messageChan: make(chan *twitchirc.PrivateMessage, 500),
+		reloadChan: make(chan ReloadMessage),
+		userNoticeChan: make(chan *twitchirc.UserNoticeMessage, 500),
 	}
 }
 
 func (cb *ChatBot) Start() {
 	cb.running = true
 
+	cb.loadBotCommands()
+	cb.loadBotMessages()
+	cb.loadAutoBroadcastMessages()
+	cb.loadUserNoticeMessages()
+
+	for _, message := range cb.botMessages {
+		if message.MinimumBits > 0 {
+			cb.bitMessages = append(cb.bitMessages, message)
+		}
+	}
+
+	go cb.sendAutoBroadcastMessages()
+	go cb.workAsync()
+
+	cb.ircClient.OnUserNoticeMessage(func(message twitchirc.UserNoticeMessage) {
+		cb.userNoticeChan <- &message
+	})
+	cb.ircClient.OnPrivateMessage(func(message twitchirc.PrivateMessage) {
+		cb.messageChan <- &message
+	})
+
+	cb.ircClient.Join(cb.streamer.Login)
+
+	go func() {
+		err := cb.ircClient.Connect()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+}
+
+func (cb *ChatBot) Stop() {
+	cb.running = false
+}
+
+func (cb *ChatBot) workAsync() {
+	for cb.running {
+		select {
+		case message := <- cb.messageChan:
+			cb.onMessage(message)
+		case message := <- cb.userNoticeChan:
+			cb.onUserNotice(message)
+		case reloadMsg := <- cb.reloadChan:
+			//TODO
+			log.Printf("[TwitchChatBot] Reload message received: %v", reloadMsg)
+		}
+	}
+}
+
+func (cb *ChatBot) loadBotCommands() {
 	var err error
 	cb.chatCommands, err = cb.twitchRepository.GetAllTwitchBotCommands()
 	if err != nil {
 		log.Printf("[TwitchChatBot] Error on receiving twitch bot commands: %v", err)
 	}
+}
 
+func (cb *ChatBot) loadUserNoticeMessages() {
+	var err error
 	userNoticeMessages, err := cb.twitchRepository.GetAllTwitchBotUserNoticeMessages()
 	if err != nil {
 		log.Printf("[TwitchChatBot] Error on receiving twitch bot user notice messages: %v", err)
-	}
-
-	cb.autoBroadcastMessages, err = cb.twitchRepository.GetAllTwitchBotAutoBroadcastMessages()
-	if err != nil {
-		log.Printf("[TwitchChatBot] Error on obtaining auto broadcast messages: %v", err)
 	}
 
 	for _, noticeMessage := range userNoticeMessages {
@@ -93,69 +157,64 @@ func (cb *ChatBot) Start() {
 
 		tier[noticeMessage.IsRecipientMe] = noticeMessage
 	}
+}
 
-	botMessages, err := cb.twitchRepository.GetAllTwitchBotMessages()
+func (cb *ChatBot) loadAutoBroadcastMessages() {
+	var err error
+	cb.autoBroadcastMessages, err = cb.twitchRepository.GetAllTwitchBotAutoBroadcastMessages()
+	if err != nil {
+		log.Printf("[TwitchChatBot] Error on obtaining auto broadcast messages: %v", err)
+	}
+}
+
+func (cb *ChatBot) loadBotMessages() {
+	var err error
+	cb.botMessages, err = cb.twitchRepository.GetAllTwitchBotMessages()
 	if err != nil {
 		log.Printf("[TwitchChatBot] Error on obtaining twitch bot messages: %v", err)
 	}
 
-	for _, message := range botMessages {
-		if message.MinimumBits > 0 {
-			cb.bitMessages = append(cb.bitMessages, message)
-		}
-	}
+}
 
-	go func() {
-		for cb.running {
+func (cb *ChatBot) sendAutoBroadcastMessages() {
+	for cb.running {
+
+		if cb.inactiveMode {
+			for range cb.chatActive {
+				cb.inactiveMode = false
+				log.Printf("[TwitchChatBot] Bot is getting in active mode again.")
+				break
+			}
+		}
+
+		for _, message := range cb.autoBroadcastMessages {
+			time.Sleep(time.Second * time.Duration(message.IntervalSeconds))
+			log.Printf("[TwitchChatBot] AutoBroadcastMessage: Content: %v, IntervalSeconds: %v", message.Message.Content, message.IntervalSeconds)
+			cb.ircClient.Say(cb.streamer.Login, message.Message.Content)
+
 			if time.Now().Unix() - cb.lastMessageTimestamp.Unix() >= chatInactiveSeconds {
 				log.Printf("[TwitchChatBot] Bot is in inactive mode right now.")
 				cb.inactiveMode = true
-
-				for range cb.chatActive {
-					cb.inactiveMode = false
-					break
-				}
-				log.Printf("[TwitchChatBot] Bot is getting in active mode again.")
-			}
-
-			for _, message := range cb.autoBroadcastMessages {
-				log.Printf("[TwitchChatBot] AutoBroadcastMessage: Content: %v, IntervalSeconds: %v", message.Message.Content, message.IntervalSeconds)
-				cb.ircClient.Say(cb.streamer.Login, message.Message.Content)
-				time.Sleep(time.Second * time.Duration(message.IntervalSeconds))
+				break
 			}
 		}
-	}()
-
-	cb.ircClient.OnUserNoticeMessage(cb.onUserNotice)
-	cb.ircClient.OnPrivateMessage(func(message twitchirc.PrivateMessage) {
-		log.Printf("[TwitchChatBot] sender=%v, sent a message to the channel %v: %v", message.User, message.Channel, message.Message)
-		cb.lastMessageTimestamp = time.Now()
-
-		if cb.inactiveMode {
-			cb.chatActive <- true
-		}
-
-		cb.onBitsReceived(&message)
-		cb.onFollowage(&message)
-		cb.onCommandReceived(&message)
-	})
-
-	cb.ircClient.Join(cb.streamer.Login)
-
-	go func() {
-		err = cb.ircClient.Connect()
-		if err != nil {
-			panic(err)
-		}
-	}()
-
+	}
 }
 
-func (cb *ChatBot) Stop() {
-	cb.running = false
+func (cb *ChatBot) onMessage(message *twitchirc.PrivateMessage) {
+	log.Printf("[TwitchChatBot] sender=%v, sent a message to the channel %v: %v", message.User, message.Channel, message.Message)
+	cb.lastMessageTimestamp = time.Now()
+
+	if cb.inactiveMode {
+		cb.chatActive <- true
+	}
+
+	cb.onBitsReceived(message)
+	cb.onFollowage(message)
+	cb.onCommandReceived(message)
 }
 
-func (cb *ChatBot) onUserNotice(message twitchirc.UserNoticeMessage) {
+func (cb *ChatBot) onUserNotice(message *twitchirc.UserNoticeMessage) {
 	msg := ""
 	tier := message.MsgParams["msg-param-sub-plan"]
 
@@ -175,7 +234,11 @@ func (cb *ChatBot) onUserNotice(message twitchirc.UserNoticeMessage) {
 
 		noticeEventMessage := cb.noticeEventMessages[message.MsgID][tier][gifted == cb.username]
 
-		msg = fmt.Sprintf(noticeEventMessage.Content, message.User.DisplayName, streak)
+		if cb.username == gifted {
+			msg = fmt.Sprintf(noticeEventMessage.Content, message.User.DisplayName, streak)
+		} else {
+			msg = fmt.Sprintf(noticeEventMessage.Content, message.User.DisplayName, gifted, streak)
+		}
 	}
 
 	if msg != "" {

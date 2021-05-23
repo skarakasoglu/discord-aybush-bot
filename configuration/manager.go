@@ -13,7 +13,6 @@ type manager struct{
 	BotUserId string
 	BaseImagePath string
 	Roles roles
-	TwitchApi twitchApi
 	Channels channels
 	PresenceUpdate presenceUpdate
 	Greeting greeting
@@ -45,11 +44,6 @@ type roles struct{
 	DefaultMemberRole string
 	MuteRole string
 	ModerationRoles []string
-}
-
-type twitchApi struct{
-	Address string
-	Port int
 }
 
 type channels struct{

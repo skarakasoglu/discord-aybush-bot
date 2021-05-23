@@ -33,7 +33,7 @@ func (cmd *loveMeterCommand) Name() string{
 
 func (cmd *loveMeterCommand) Execute(message *discordgo.Message) (string, error){
 	if message.ChannelID != configuration.Manager.Channels.Aybus{
-		log.Printf("%v command is received in wrong channel. User: %v#%v, channel: %v", cmd.Name(),
+		log.Printf("[AybushBot::LoveMeter] %v command is received in wrong channel. User: %v#%v, channel: %v", cmd.Name(),
 			message.Author.Username, message.Author.Discriminator, message.ChannelID)
 		return "", nil
 	}
@@ -44,7 +44,7 @@ func (cmd *loveMeterCommand) Execute(message *discordgo.Message) (string, error)
 
 	member,err := cmd.session.GuildMember(message.GuildID, message.Mentions[0].ID)
 	if err != nil{
-		log.Printf("Error on optaining member: %v", err)
+		log.Printf("[AybushBot::LoveMeter] Error on optaining member: %v", err)
 		return "", err
 	}
 
@@ -78,10 +78,10 @@ func (cmd *loveMeterCommand) Execute(message *discordgo.Message) (string, error)
 
 	_, err = cmd.session.ChannelMessageSendEmbed(message.ChannelID, newEmbed)
 	if err != nil {
-		log.Printf("Error sending embed message Aybus Channel: %v", err)
+		log.Printf("[AybushBot::LoveMeter] Error sending embed message Aybus Channel: %v", err)
 	}
 
-	log.Printf("%v between %v",member.User.Username,message.Author.Username)
+	log.Printf("[AybushBot::LoveMeter] %v and %v",member.User.Username,message.Author.Username)
 	return  "", nil
 }
 

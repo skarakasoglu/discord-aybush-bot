@@ -23,7 +23,7 @@ type webhookRequest struct{
 
 func (api *ApiClient) subscribeToStreamChangedEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
-		Callback:     fmt.Sprintf("%v/%v/streams", BASE_API_URL, DEFAULT_API_VER),
+		Callback:     fmt.Sprintf("%v/%v/streams/%v", BASE_API_URL, DEFAULT_API_VER, userID),
 		Mode:         "subscribe",
 		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/streams?user_id=%v", userID),
 		LeaseSeconds: leaseSeconds,
@@ -34,7 +34,7 @@ func (api *ApiClient) subscribeToStreamChangedEvent(userID string, leaseSeconds 
 
 func (api *ApiClient) unsubscribeFromStreamChangedEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
-		Callback:     fmt.Sprintf("%v/%v/streams", BASE_API_URL, DEFAULT_API_VER),
+		Callback:     fmt.Sprintf("%v/%v/streams/%v", BASE_API_URL, DEFAULT_API_VER, userID),
 		Mode:         "unsubscribe",
 		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/streams?user_id=%v", userID),
 		LeaseSeconds: leaseSeconds,
@@ -45,7 +45,7 @@ func (api *ApiClient) unsubscribeFromStreamChangedEvent(userID string, leaseSeco
 
 func (api *ApiClient) subscribeToUserFollowsEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
-		Callback:     fmt.Sprintf("%v/%v/follows", BASE_API_URL, DEFAULT_API_VER),
+		Callback:     fmt.Sprintf("%v/%v/follows/%v", BASE_API_URL, DEFAULT_API_VER, userID),
 		Mode:         "subscribe",
 		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/users/follows?first=1&to_id=%v", userID),
 		LeaseSeconds: leaseSeconds,
@@ -56,7 +56,7 @@ func (api *ApiClient) subscribeToUserFollowsEvent(userID string, leaseSeconds in
 
 func (api *ApiClient) unsubscribeFromUserFollowsEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
-		Callback:     fmt.Sprintf("%v/%v/follows", BASE_API_URL, DEFAULT_API_VER),
+		Callback:     fmt.Sprintf("%v/%v/follows/%v", BASE_API_URL, DEFAULT_API_VER, userID),
 		Mode:         "unsubscribe",
 		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/users/follows?first=1&to_id=%v", userID),
 		LeaseSeconds: leaseSeconds,
@@ -74,7 +74,6 @@ func (api *ApiClient) makeWebhookRequest(webhookReq webhookRequest) {
 	}
 
 	reqBody := bytes.NewReader(reqBuffer)
-	log.Printf(string(reqBuffer))
 
 	req, err := http.NewRequest(http.MethodPost, webhookURL, reqBody)
 	if err != nil {

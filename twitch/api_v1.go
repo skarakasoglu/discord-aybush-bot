@@ -62,28 +62,36 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 		return
 	}
 
-	signature := ctx.GetHeader("X-Hub-Signature")
-	valid, signatureShouldBe := api.validateSignature(signature, buffer)
-	if !valid{
-		log.Printf("[TwitchWebhookAPI] The payload signature is not valid. Unauthenticated request, signature: %v, signatureShouldBe: %v",
-			signature, signatureShouldBe)
-		ctx.String(http.StatusOK, "")
-		return
-	}
-
 	notificationId := ctx.GetHeader("Twitch-Notification-Id")
 	_, ok := api.receivedNotifications[notificationId]
 	if ok {
 		log.Printf("[TwitchWebhookAPI] Duplicate streamChanged notification received from twitch: %v", notificationId)
 	} else {
-		api.receivedNotifications[notificationId] = notificationId
 		var streamChanged messages.StreamChanged
 
 		if len(streamChangePayload.Data) < 1 {
 			streamChanged.UserID = "0"
+
+			userId := ctx.Param("userId")
+			streamer := api.apiClient.getUserInfoByUserId(userId)
+
+			streamChanged = messages.StreamChanged{
+				Username:     streamer.Login,
+			}
 		} else {
+			signature := ctx.GetHeader("X-Hub-Signature")
+			valid, signatureShouldBe := api.validateSignature(signature, buffer)
+			if !valid{
+				log.Printf("[TwitchWebhookAPI] The payload signature is not valid. Payload: %+v Unauthenticated request, signature: %v, signatureShouldBe: %v",
+					streamChangePayload.Data[0], signature, signatureShouldBe)
+				ctx.String(http.StatusOK, "")
+				return
+			}
+
+			api.receivedNotifications[notificationId] = notificationId
+
 			streamChangeInfo := streamChangePayload.Data[0]
-			log.Printf("[TwitchWebhookAPI] Notification id: %v stream changed end point called: %v", notificationId, streamChangeInfo)
+			log.Printf("[TwitchWebhookAPI] Notification id: %v stream changed end point called: %+v", notificationId, streamChangeInfo)
 
 			streamer := api.apiClient.getUserInfoByUsername(streamChangeInfo.Username)
 			game := api.apiClient.getGameById(streamChangeInfo.GameId)
@@ -129,17 +137,19 @@ func (api *apiV1) onUserFollows(ctx *gin.Context) {
 		return
 	}
 
+	userId := ctx.Param("userId")
+
 	notificationId := ctx.GetHeader("Twitch-Notification-Id")
 	_, ok := api.receivedNotifications[notificationId]
 	if ok {
-		log.Printf("[TwitchWebhookAPI] Duplicate userFollows notification received from twitch: %v", notificationId)
+		log.Printf("[TwitchWebhookAPI] UserId: %v, Duplicate userFollows notification received from twitch: %v", userId, notificationId)
 	} else {
 		api.receivedNotifications[notificationId] = notificationId
 		if len(followPayload.Data) < 1 {
 			log.Printf("[TwitchWebhookAPI] User follow end point called but no data found.")
 		} else {
 			followInfo := followPayload.Data[0]
-			log.Printf("[TwitchWebhookAPI] NotificationId: %v User follows end point called: %v", notificationId, followInfo)
+			log.Printf("[TwitchWebhookAPI] NotificationId: %v, UserId: %v User follows end point called: %v", notificationId, userId, followInfo)
 			api.userFollowsChan <- followInfo
 		}
 	}
