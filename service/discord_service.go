@@ -61,7 +61,7 @@ func (d DiscordService) DeleteDiscordLevel(level int) (bool error) {
 
 func (d DiscordService) InsertDiscordMember(member models.DiscordMember) (int, error) {
 	query := `INSERT INTO "discord_members"("member_id","email","username","discriminator","is_verified","is_bot","joined_at","is_left","guild_id") 
-				VALUES($1,$2,$3,$4,$5,$6,$7,$8) 
+				VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) 
 				ON CONFLICT(member_id) DO UPDATE SET 
 				    username = excluded.username, discriminator = excluded.discriminator, is_verified = excluded.is_verified,
 				    is_bot = excluded.is_bot, joined_at = excluded.joined_at, guild_id = excluded.guild_id
