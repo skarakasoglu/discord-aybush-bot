@@ -3,7 +3,7 @@ services:
   aybush_bot:
     container_name: AybushBot
     build: .
-    image: "skarakasoglu/aybush-bot:1.0.0"
+    image: skarakasoglu/aybush-bot:1.0.0
     restart: always
     environment:
       applicationMode: Release
