@@ -9,4 +9,6 @@ type DiscordMemberLevel struct{
 	NextLevel DiscordLevel
 	ExperiencePoints int64
 	LastMessageTimestamp time.Time
+	MessageCount int64
+	ActiveVoiceMinutes int64
 }

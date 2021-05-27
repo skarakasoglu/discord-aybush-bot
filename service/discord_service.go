@@ -60,10 +60,10 @@ func (d DiscordService) DeleteDiscordLevel(level int) (bool error) {
 }
 
 func (d DiscordService) InsertDiscordMember(member models.DiscordMember) (int, error) {
-	query := `INSERT INTO "discord_members"("member_id","email","username","discriminator","is_verified","is_bot","joined_at","is_left","guild_id") 
-				VALUES($1,$2,$3,$4,$5,$6,$7,$8) 
+	query := `INSERT INTO "discord_members"("member_id","email","username","discriminator","avatar_url","is_verified","is_bot","joined_at","is_left","guild_id") 
+				VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) 
 				ON CONFLICT(member_id) DO UPDATE SET 
-				    username = excluded.username, discriminator = excluded.discriminator, is_verified = excluded.is_verified,
+				    username = excluded.username, discriminator = excluded.discriminator, avatar_url = excluded.avatar_url, is_verified = excluded.is_verified,
 				    is_bot = excluded.is_bot, joined_at = excluded.joined_at, guild_id = excluded.guild_id
 				RETURNING id;`
 
@@ -74,7 +74,7 @@ func (d DiscordService) InsertDiscordMember(member models.DiscordMember) (int, e
 	}
 
 	lastInsertedId := 0
-	err = preparedStmt.QueryRow(member.MemberId, member.Email, member.Username, member.Discriminator, member.IsVerified, member.IsBot, member.JoinedAt, member.Left, member.GuildId).Scan(&lastInsertedId)
+	err = preparedStmt.QueryRow(member.MemberId, member.Email, member.Username, member.Discriminator, member.AvatarUrl, member.IsVerified, member.IsBot, member.JoinedAt, member.Left, member.GuildId).Scan(&lastInsertedId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return lastInsertedId, err
@@ -84,7 +84,7 @@ func (d DiscordService) InsertDiscordMember(member models.DiscordMember) (int, e
 }
 
 func (d DiscordService) UpdateDiscordMemberById(member models.DiscordMember) (bool, error) {
-	query := `UPDATE "discord_members" SET username=$1,discriminator=$2,is_verified=$3,is_bot=$4,joined_at=$5,is_left=$6,guild_id=$7 where member_id=$8;`
+	query := `UPDATE "discord_members" SET username=$1,discriminator=$2,avatar_url=$3,is_verified=$4,is_bot=$5,joined_at=$6,is_left=$7,guild_id=$8 where member_id=$9;`
 
 	preparedStmt, err := d.db.Prepare(query)
 	if err != nil {
@@ -92,7 +92,7 @@ func (d DiscordService) UpdateDiscordMemberById(member models.DiscordMember) (bo
 		return false, err
 	}
 
-	_, err = preparedStmt.Query(member.Username, member.Discriminator, member.IsVerified, member.IsBot, member.JoinedAt, member.Left, member.GuildId,member.MemberId)
+	_, err = preparedStmt.Query(member.Username, member.Discriminator, member.AvatarUrl, member.IsVerified, member.IsBot, member.JoinedAt, member.Left, member.GuildId,member.MemberId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
@@ -104,12 +104,13 @@ func (d DiscordService) UpdateDiscordMemberById(member models.DiscordMember) (bo
 func (d DiscordService) GetDiscordMemberById(memberId string) (models.DiscordMember, error) {
 	var member models.DiscordMember
 
-	query := `SELECT * FROM "discord_members" where member_id = $1;`
+	query := `SELECT id, member_id, email, username, discriminator, is_verified, 
+       is_bot, joined_at, is_left, guild_id, avatar_url FROM "discord_members" where member_id = $1;`
 
 	row := d.db.QueryRow(query, memberId)
 
 	var email sql.NullString
-	err := row.Scan(&member.Id, &member.MemberId, &email, &member.Username, &member.Discriminator, &member.IsVerified, &member.IsBot, &member.JoinedAt, &member.Left, &member.GuildId)
+	err := row.Scan(&member.Id, &member.MemberId, &email, &member.Username, &member.Discriminator, &member.IsVerified, &member.IsBot, &member.JoinedAt, &member.Left, &member.GuildId, &member.AvatarUrl)
 	if err != nil {
 		log.Printf("[DiscordService] Error on scanning row: %v", err)
 		return member, err
@@ -128,7 +129,7 @@ func (d DiscordService) DeleteDiscordMemberById(memberId string) (bool, error) {
 }
 
 func (d DiscordService) InsertDiscordMemberLevel(level models.DiscordMemberLevel) (int, error) {
-	query := `INSERT INTO "discord_member_levels" (member_id, experience_points, last_message_timestamp) VALUES($1, $2, $3) RETURNING id;`
+	query := `INSERT INTO "discord_member_levels" (member_id, experience_points, last_message_timestamp, message_count, active_voice_minutes) VALUES($1, $2, $3, $4, $5) RETURNING id;`
 
 	preparedStatement, err := d.db.Prepare(query)
 	if err != nil {
@@ -137,7 +138,7 @@ func (d DiscordService) InsertDiscordMemberLevel(level models.DiscordMemberLevel
 	}
 
 	lastInsertedId := -1
-	err = preparedStatement.QueryRow(level.MemberId, level.ExperiencePoints, level.LastMessageTimestamp).Scan(&lastInsertedId)
+	err = preparedStatement.QueryRow(level.MemberId, level.ExperiencePoints, level.LastMessageTimestamp, level.MessageCount, level.ActiveVoiceMinutes).Scan(&lastInsertedId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return -1, err
@@ -147,7 +148,7 @@ func (d DiscordService) InsertDiscordMemberLevel(level models.DiscordMemberLevel
 }
 
 func (d DiscordService) UpdateDiscordMemberLevelById(level models.DiscordMemberLevel) (bool, error) {
-	query := `UPDATE "discord_member_levels" SET experience_points = $1, last_message_timestamp = $2 where member_id = $3;`
+	query := `UPDATE "discord_member_levels" SET experience_points = $1, last_message_timestamp = $2, message_count = $3, active_voice_minutes = $4 where member_id = $5;`
 
 	preparedStatement, err := d.db.Prepare(query)
 	if err != nil {
@@ -155,7 +156,7 @@ func (d DiscordService) UpdateDiscordMemberLevelById(level models.DiscordMemberL
 		return false, err
 	}
 
-	_, err = preparedStatement.Exec(level.ExperiencePoints, level.LastMessageTimestamp, level.MemberId)
+	_, err = preparedStatement.Exec(level.ExperiencePoints, level.LastMessageTimestamp, level.MessageCount, level.ActiveVoiceMinutes, level.MemberId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
@@ -166,8 +167,9 @@ func (d DiscordService) UpdateDiscordMemberLevelById(level models.DiscordMemberL
 
 func (d DiscordService) GetAllDiscordMemberLevels() ([]models.DiscordMemberLevel, error) {
 	query := `
-			SELECT dml.id, dm.username, dm.discriminator, dml.experience_points, dml.last_message_timestamp, dm.member_id, dm.guild_id,
-			cdl.id "current_level",  cdl.required_experience_points "current_level_required", cdl.maximum_experience_points "current_level_maximum", 
+			SELECT dml.id, dm.username, dm.discriminator, dml.experience_points, dml.last_message_timestamp,dml.message_count, dml.active_voice_minutes, 
+		   dm.member_id, dm.guild_id, cdl.id "current_level",  cdl.required_experience_points "current_level_required", 
+		   cdl.maximum_experience_points "current_level_maximum", 
 			cdr.id "current_role_id", cdr.role_id "current_role_role_id", cdr.name "current_role_name",
 			ndl.id "next_level", ndl.required_experience_points "next_level_required", ndl.maximum_experience_points "next_level_maximum",
 			ndr.id "next_role_id", ndr.role_id "next_role_role_id", ndr.name "next_role_name"
@@ -176,7 +178,8 @@ func (d DiscordService) GetAllDiscordMemberLevels() ([]models.DiscordMemberLevel
 			inner join "discord_levels" as cdl on dml.experience_points between cdl.required_experience_points and cdl.maximum_experience_points
 			inner join "discord_levels" as ndl on cdl.maximum_experience_points = ndl.required_experience_points
 			inner join "discord_roles" as cdr on cdr.role_id = cdl.role_id
-			inner join "discord_roles" as ndr on ndr.role_id = ndl.role_id;
+			inner join "discord_roles" as ndr on ndr.role_id = ndl.role_id
+			WHERE is_left = false;
 	`
 
 	rows, err := d.db.Query(query)
@@ -193,7 +196,8 @@ func (d DiscordService) GetAllDiscordMemberLevels() ([]models.DiscordMemberLevel
 		var currentLevel models.DiscordLevel
 		var nextLevel models.DiscordLevel
 
-		err = rows.Scan(&memberLevel.Id, &member.Username, &member.Discriminator, &memberLevel.ExperiencePoints, &memberLevel.LastMessageTimestamp, &member.MemberId,
+		err = rows.Scan(&memberLevel.Id, &member.Username, &member.Discriminator, &memberLevel.ExperiencePoints,
+			&memberLevel.LastMessageTimestamp, &memberLevel.MessageCount, &memberLevel.ActiveVoiceMinutes, &member.MemberId,
 			&member.GuildId, &currentLevel.Id, &currentLevel.RequiredExperiencePoints, &currentLevel.MaximumExperiencePoints,
 			&currentLevel.DiscordRole.Id, &currentLevel.DiscordRole.RoleId, &currentLevel.DiscordRole.Name,
 			&nextLevel.Id, &nextLevel.RequiredExperiencePoints, &nextLevel.MaximumExperiencePoints,

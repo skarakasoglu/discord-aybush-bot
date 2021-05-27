@@ -81,6 +81,9 @@ func New(discordConnection *discordgo.Session,
 	rank := commands.NewRankCommand(aybus.levelManager.OnRankQuery)
 	aybus.commands[rank.Name()] = rank
 
+	leaderboard := commands.NewLeaderboardCommand()
+	aybus.commands[leaderboard.Name()] = leaderboard
+
 	return aybus
 }
 
@@ -90,6 +93,7 @@ func (a*Aybush) Start() {
 	log.Println("[AybushBot] Registering handlers.")
 	a.discordConnection.AddHandler(a.onMemberJoin)
 	a.discordConnection.AddHandler(a.onMemberLeave)
+	a.discordConnection.AddHandler(a.onMemberUpdate)
 	a.discordConnection.AddHandler(a.onCommandReceived)
 	a.discordConnection.AddHandler(a.onURLSend)
 	a.discordConnection.AddHandler(a.onTicketReactionAdd)

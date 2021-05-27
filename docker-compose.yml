@@ -1,16 +1,15 @@
-version: '3.8'
+version: '3.2'
 services:
   aybush_bot:
     container_name: AybushBot
     build: .
-    image: aybush-bot:1.0.0
+    image: skarakasoglu/aybush-bot:1.0.0
     restart: always
     environment:
       applicationMode: Release
       applicationName: "Aybush Bot"
       executablePath: bin
       executableName: AybushBot
-      baseApiAddress: 1.2.3.4:5
       discordAccessToken: discord_access_token
       twitchClientId: twitch_client_id
       twitchClientSecret: twitch_client_secret
@@ -21,7 +20,8 @@ services:
       dbPassword: db_password
       dbName: db_name
       webhookHubSecret: very_secret
+      certFile: /path/to/ssl/cert/file
+      keyFile: /path/to/ssl/key/file
       GIN_MODE: debug
-      PORT: 8090
     ports:
-    - "8090:8090"
+    - "8090:443"

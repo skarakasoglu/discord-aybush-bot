@@ -81,6 +81,8 @@ func (api *ApiClient) makeWebhookRequest(webhookReq webhookRequest) {
 		return
 	}
 
+	log.Printf("[TwitchWebhookAPI] Webhook subscribe/unsubscribe request: %v", string(reqBuffer))
+
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", api.appAccessToken))
 	req.Header.Set("Client-ID", api.clientId)
 	req.Header.Set("Content-Type", "application/json")
