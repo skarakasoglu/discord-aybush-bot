@@ -343,9 +343,9 @@ func (m *Manager) earnExperienceFromMessage(messageCreate *discordgo.MessageCrea
 		}
 	} else {
 		timeDiff := sentTime.Unix() - status.LastMessageTimestamp.Unix()
-		status.MessageCount++
 
 		if timeDiff < textChannelEarningTimeoutSeconds {
+			status.MessageCount++
 			return
 		}
 	}
