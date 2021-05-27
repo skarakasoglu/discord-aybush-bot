@@ -187,6 +187,8 @@ func (m *Manager) loadDiscordMemberLevels() {
 	for _, memberLevel := range memberLevels {
 		wg.Add(1)
 		go func(memberLevelParam models.DiscordMemberLevel) {
+			defer wg.Done()
+
 			log.Printf("[AybushBot::LevelManager] MemberLevelStatusId: %v, MemberId: %v, GuildId: %v, Username: %v#%v, Exp: %v, CurrentLevel: %v, NextLevel: %v",
 				memberLevelParam.Id, memberLevelParam.MemberId,
 				memberLevelParam.GuildId, memberLevelParam.Username, memberLevelParam.Discriminator, memberLevelParam.ExperiencePoints,
@@ -216,8 +218,6 @@ func (m *Manager) loadDiscordMemberLevels() {
 			m.orderedMemberLevelStatusMtx.Lock()
 			m.orderedMemberLevelStatuses = append(m.orderedMemberLevelStatuses, &memberLevelStatus)
 			m.orderedMemberLevelStatusMtx.Unlock()
-
-			wg.Done()
 		}(memberLevel)
 	}
 	wg.Wait()
