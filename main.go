@@ -31,6 +31,8 @@ var (
 	dbUsername string
 	dbPassword string
 	dbName string
+	certFile string
+	keyFile string
 )
 
 func init() {
@@ -47,6 +49,8 @@ func init() {
 	flag.StringVar(&dbUsername, "db-username", "", "database login username")
 	flag.StringVar(&dbPassword, "db-password", "", "database login password")
 	flag.StringVar(&dbName, "db-name", "", "database name")
+	flag.StringVar(&certFile, "cert-file", "", "ssl certificate file")
+	flag.StringVar(&keyFile, "key-file", "", "ssl private key file")
 	flag.Parse()
 
 	configuration.ReadConfigurationFile(configurationFilePath, configurationFileName)
@@ -86,7 +90,7 @@ func main() {
 	aybusBot := bot.New(dg, userFollowChan, streamChangedChan, discordService)
 	aybusBot.Start()
 
-	twitchWebhookManager := twitch.NewManager(streamerUsername, twitchClientSecret, twitchClientId, twitchRefreshToken, userFollowChan, streamChangedChan, hubSecret, baseApiAddress, twitchService)
+	twitchWebhookManager := twitch.NewManager(streamerUsername, twitchClientSecret, twitchClientId, twitchRefreshToken, userFollowChan, streamChangedChan, hubSecret, twitchService, certFile, keyFile)
 	err = twitchWebhookManager.Start()
 
 	log.Println("AYBUSH BOT is now running. Press CTRL + C to interrupt.")

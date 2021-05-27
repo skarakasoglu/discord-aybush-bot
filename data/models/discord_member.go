@@ -7,6 +7,7 @@ type DiscordMember struct{
 	MemberId string
 	GuildId string
 	Email string
+	AvatarUrl string
 	Username string
 	Discriminator string
 	IsVerified bool

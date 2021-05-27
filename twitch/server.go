@@ -11,6 +11,9 @@ type server struct{
 	apiClient *ApiClient
 	userFollowsChan chan<- payloads.UserFollows
 	streamChangedChan chan<- messages.StreamChanged
+
+	certFile string
+	keyFile string
 }
 
 type api interface{
@@ -21,11 +24,14 @@ type api interface{
 
 func NewServer(apiClient *ApiClient,
 	userFollowsChan chan<- payloads.UserFollows,
-	streamChanged chan<- messages.StreamChanged) *server{
+	streamChanged chan<- messages.StreamChanged,
+	certFile string, keyFile string) *server{
 	return &server{
 		apiClient: apiClient,
 		userFollowsChan: userFollowsChan,
 		streamChangedChan: streamChanged,
+		certFile: certFile,
+		keyFile: keyFile,
 	}
 }
 
@@ -34,7 +40,7 @@ func (srv *server) Start() error {
 
 	apiv1 := NewApiV1(srv.apiClient, srv.userFollowsChan, srv.streamChangedChan)
 
-	twitchApi := router.Group("/api/twitch")
+	twitchApi := router.Group("/api")
 
 	v1 := twitchApi.Group("/v1")
 	{
@@ -44,7 +50,7 @@ func (srv *server) Start() error {
 		v1.POST("/follows/:userId", apiv1.onUserFollows)
 	}
 
-	err := router.Run()
+	err := router.RunTLS(":443", srv.certFile, srv.keyFile)
 	if err != nil {
 		log.Printf("Error on running the router: %v", err)
 		return err

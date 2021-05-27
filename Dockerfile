@@ -14,9 +14,9 @@ ADD --chown=aybush:aybush . /go/src/github.com/skarakasoglu/discord-aybush-bot/
 RUN chown aybush:aybush /go/src/github.com/skarakasoglu/discord-aybush-bot/ && chmod 744 run.sh
 
 #Log in as aybush.
-USER aybush
+#USER aybush
 
 # is going to be used with twitch webhooks.
-EXPOSE 8080:8080
+EXPOSE 8090:443
 
 CMD ["/bin/bash", "-c", "./run.sh"]

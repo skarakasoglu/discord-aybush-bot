@@ -56,11 +56,32 @@ func (a*Aybush) onMemberJoin(session *discordgo.Session, memberAdd *discordgo.Gu
 		Left:          false,
 		JoinedAt:      joinedAt,
 		GuildId: memberAdd.GuildID,
+		AvatarUrl: memberAdd.User.AvatarURL(""),
 	}
 
 	_, err = a.discordRepository.InsertDiscordMember(member)
 	if err != nil {
 		log.Printf("[AybushBot] Error on inserting new member: %v to database: %v", member, err)
+	}
+}
+
+func (a *Aybush) onMemberUpdate(session *discordgo.Session, memberUpdate *discordgo.GuildMemberUpdate) {
+	log.Printf("[AybushBot] Id: %v Username: %v#%v member was updated.", memberUpdate.User.ID, memberUpdate.User.Username, memberUpdate.User.Discriminator)
+
+	member, err := a.discordRepository.GetDiscordMemberById(memberUpdate.User.ID)
+	if err != nil {
+		log.Printf("[AybushBot] Error on obtaining discord member: %v", err)
+		return
+	}
+
+	member.Username = memberUpdate.User.Username
+	member.Discriminator = memberUpdate.User.Discriminator
+	member.AvatarUrl = memberUpdate.User.AvatarURL("")
+	member.IsVerified = memberUpdate.User.Verified
+
+	_, err = a.discordRepository.UpdateDiscordMemberById(member)
+	if err != nil {
+		log.Printf("[AybushBot] Error on updating the guild member: %v", err)
 	}
 }
 
@@ -70,7 +91,7 @@ func (a*Aybush) onMemberLeave(session *discordgo.Session, memberLeave *discordgo
 		log.Printf("[AybushBot] Error on obtaining guild: %v", err)
 	}
 
-	log.Printf("%v left from %v", memberLeave.User.Username, guild.Name)
+	log.Printf("[AybushBot] Id: %v, Username: %v#%v left from %v", memberLeave.User.ID, memberLeave.User.Username, memberLeave.User.Discriminator, guild.Name)
 
 	botLogMsg := fmt.Sprintf("> **ID**: `%v`, **Kullanıcı Adı**: `%v#%v` sunucudan ayrıldı.",
 		memberLeave.User.ID, memberLeave.User.Username, memberLeave.User.Discriminator)

@@ -343,12 +343,14 @@ func (m *Manager) earnExperienceFromMessage(messageCreate *discordgo.MessageCrea
 		}
 	} else {
 		timeDiff := sentTime.Unix() - status.LastMessageTimestamp.Unix()
+		status.MessageCount++
 
 		if timeDiff < textChannelEarningTimeoutSeconds {
 			return
 		}
 	}
 
+	status.MessageCount++
 	status.LastMessageTimestamp = sentTime
 
 	m.earnExperience(status, ExpTypeText)
@@ -366,6 +368,7 @@ func (m *Manager) earnExperienceFromVoice(memberId string) {
 		}
 	}
 
+	status.ActiveVoiceMinutes += voiceChannelEarningTimeoutSeconds / 60
 	m.earnExperience(status, ExpTypeVoice)
 }
 

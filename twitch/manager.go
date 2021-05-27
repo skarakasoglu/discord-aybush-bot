@@ -1,7 +1,6 @@
 package twitch
 
 import (
-	"fmt"
 	"github.com/skarakasoglu/discord-aybush-bot/repository"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
@@ -10,7 +9,7 @@ import (
 )
 
 var (
-	BASE_API_URL = ""
+	BASE_API_URL = "https://twitch.aybushbot.com/api"
 	DEFAULT_API_VER = "v1"
 	leaseSeconds = 864000
 )
@@ -25,6 +24,10 @@ type Manager struct{
 	clientId string
 	userRefreshToken string
 
+	certFile string
+	keyFile string
+
+	apiServer *server
 	apiClient *ApiClient
 	chatBot *ChatBot
 
@@ -37,9 +40,9 @@ type Manager struct{
 
 func NewManager(streamerUsername string, clientSecret string, clientID string, userRefreshToken string,
 	userFollowsChan chan<- payloads.UserFollows,
-	streamChangedChan chan<- messages.StreamChanged, hubSecretP string, baseApiURL string, twitchRepository repository.TwitchRepository) *Manager{
+	streamChangedChan chan<- messages.StreamChanged, hubSecretP string, twitchRepository repository.TwitchRepository,
+	certFile string, keyFile string) *Manager{
 	hubSecret = hubSecretP
-	BASE_API_URL = fmt.Sprintf("http://%v/api/twitch", baseApiURL)
 
 	return &Manager{
 		streamer: payloads.User{Login: streamerUsername},
@@ -51,6 +54,8 @@ func NewManager(streamerUsername string, clientSecret string, clientID string, u
 		running: false,
 		twitchRepository: twitchRepository,
 		apiClient: NewApiClient(clientID, clientSecret, userRefreshToken),
+		certFile: certFile,
+		keyFile: keyFile,
 	}
 }
 
@@ -66,10 +71,10 @@ func (man *Manager) Start() error {
 	man.chatBot = NewChatBot("aybushbot", man.apiClient.userAccessToken, man.streamer, man.apiClient, man.twitchRepository)
 	man.chatBot.Start()
 
-	srv := NewServer(man.apiClient,
-		man.userFollowsChan, man.streamChangedChan)
+	man.apiServer = NewServer(man.apiClient,
+		man.userFollowsChan, man.streamChangedChan, man.certFile, man.keyFile)
 	go func () {
-		err := srv.Start()
+		err := man.apiServer.Start()
 		if err != nil {
 			log.Printf("[TwitchManager] Error on starting the server: %v", err)
 		}
@@ -91,6 +96,9 @@ func (man *Manager) Start() error {
 
 func (man *Manager) Stop() {
 	man.running = false
+
+	man.chatBot.Stop()
+
 	man.apiClient.unsubscribeFromStreamChangedEvent(man.streamer.Id, leaseSeconds)
 	man.apiClient.unsubscribeFromUserFollowsEvent(man.streamer.Id, leaseSeconds)
 	// Wait for receiving unsubscribe request from twitch API.
