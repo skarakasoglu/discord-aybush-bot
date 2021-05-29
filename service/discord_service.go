@@ -93,7 +93,7 @@ func (d DiscordService) UpdateDiscordMemberById(member models.DiscordMember) (bo
 		return false, err
 	}
 
-	_, err = preparedStmt.Query(member.Username, member.Discriminator, member.AvatarUrl, member.IsVerified, member.IsBot, member.JoinedAt, member.Left, member.GuildId,member.MemberId)
+	_, err = preparedStmt.Exec(member.Username, member.Discriminator, member.AvatarUrl, member.IsVerified, member.IsBot, member.JoinedAt, member.Left, member.GuildId,member.MemberId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
