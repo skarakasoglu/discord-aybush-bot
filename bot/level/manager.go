@@ -481,29 +481,33 @@ func (m *Manager) calculateEarnedExperience(member *MemberLevelStatus, bothSubAn
 
 	min, max := 0, 0
 
-	if isSub {
-		if isBooster {
-			max = bothSubAndBoosterMax
-			min = bothSubAndBoosterMin
-		} else {
-			max = notBoosterButSubMax
-			min = notBoosterButSubMin
-		}
+	if member.MemberId == "125353742160756739" {
+		min, max = 1, 1
 	} else {
-		if isBooster {
-			max = notSubButBoosterMax
-			min = notSubButBoosterMin
+		if isSub {
+			if isBooster {
+				max = bothSubAndBoosterMax
+				min = bothSubAndBoosterMin
+			} else {
+				max = notBoosterButSubMax
+				min = notBoosterButSubMin
+			}
 		} else {
-			max = notSubNotBoosterMax
-			min = notSubNotBoosterMin
+			if isBooster {
+				max = notSubButBoosterMax
+				min = notSubButBoosterMin
+			} else {
+				max = notSubNotBoosterMax
+				min = notSubNotBoosterMin
+			}
 		}
-	}
 
-	for _, expDemotionLevel := range expDemotionLevels {
-		if member.CurrentLevel.Id >= expDemotionLevel {
-			max -= int(math.Round(float64(max) * expDemotionPercentage / 100))
-			if min > 1 {
-				min -= int(math.Round(float64(min) * expDemotionPercentage / 100.0))
+		for _, expDemotionLevel := range expDemotionLevels {
+			if member.CurrentLevel.Id >= expDemotionLevel {
+				max -= int(math.Round(float64(max) * expDemotionPercentage / 100))
+				if min > 1 {
+					min -= int(math.Round(float64(min) * expDemotionPercentage / 100.0))
+				}
 			}
 		}
 	}
