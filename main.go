@@ -87,6 +87,7 @@ func main() {
 		log.Printf("[AybushBot] Error on creating db connection: %v", err)
 		return
 	}
+	defer db.Close()
 
 	discordService := service.NewDiscordService(db)
 	twitchService := service.NewTwitchService(db)
