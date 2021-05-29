@@ -9,6 +9,7 @@ import (
 	"github.com/skarakasoglu/discord-aybush-bot/repository"
 	"image/png"
 	"log"
+	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -27,6 +28,8 @@ var experienceTypes = map[ExpType]string{
 	ExpTypeVoice: "Voice",
 	ExpTypeText: "Text",
 }
+
+var expDemotionLevels = []int{50, 75}
 
 var rolePositions []string
 
@@ -57,25 +60,27 @@ const (
 	textChannelEarningTimeoutSeconds = 60
 	voiceChannelEarningTimeoutSeconds = 60
 
+	expDemotionPercentage = 20.0
+
 	notSubNotBoosterTextMin = 1
 	notSubNotBoosterTextMax = 15
 	notSubNotBoosterVoiceMin = 1
 	notSubNotBoosterVoiceMax = 15
 
 	notBoosterButSubTextMin = 5
-	notBoosterButSubTextMax = 15
+	notBoosterButSubTextMax = 20
 	notBoosterButSubVoiceMin = 5
-	notBoosterButSubVoiceMax = 15
+	notBoosterButSubVoiceMax = 20
 
 	notSubButBoosterTextMin = 5
-	notSubButBoosterTextMax = 15
+	notSubButBoosterTextMax = 20
 	notSubButBoosterVoiceMin = 5
-	notSubButBoosterVoiceMax = 15
+	notSubButBoosterVoiceMax = 20
 
 	bothSubAndBoosterTextMin = 10
-	bothSubAndBoosterTextMax = 15
+	bothSubAndBoosterTextMax = 25
 	bothSubAndBoosterVoiceMin = 10
-	bothSubAndBoosterVoiceMax = 15
+	bothSubAndBoosterVoiceMax = 25
 
 	gradedMemberCount = 3
 )
@@ -431,10 +436,10 @@ func (m *Manager) earnExperience(status *MemberLevelStatus, expType ExpType) {
 	earnedExperience := 0
 
 	if expType == ExpTypeVoice {
-		earnedExperience = m.calculateEarnedExperience(status.Member, bothSubAndBoosterVoiceMax, bothSubAndBoosterVoiceMin,
+		earnedExperience = m.calculateEarnedExperience(status, bothSubAndBoosterVoiceMax, bothSubAndBoosterVoiceMin,
 			notBoosterButSubVoiceMax, notBoosterButSubVoiceMin, notSubButBoosterVoiceMax, notSubButBoosterVoiceMin, notSubNotBoosterVoiceMax, notSubNotBoosterVoiceMin)
 	} else if expType == ExpTypeText {
-		earnedExperience = m.calculateEarnedExperience(status.Member,
+		earnedExperience = m.calculateEarnedExperience(status,
 			bothSubAndBoosterTextMax, bothSubAndBoosterTextMin,
 			notBoosterButSubTextMax, notBoosterButSubTextMin,
 			notSubButBoosterTextMax, notSubButBoosterTextMin, notSubNotBoosterTextMax, notSubNotBoosterTextMin)
@@ -460,36 +465,52 @@ func (m *Manager) earnExperience(status *MemberLevelStatus, expType ExpType) {
 		status.MemberId, status.Member.User.Username, status.Member.User.Discriminator, earnedExperience, status.CurrentLevel.Id, status.ExperiencePoints, status.NextLevel.Id, status.NextLevel.RequiredExperiencePoints)
 }
 
-func (m *Manager) calculateEarnedExperience(member *discordgo.Member, bothSubAndBoosterMax int, bothSubAndBoosterMin int, notBoosterButSubMax int, notBoosterButSubMin int,
+func (m *Manager) calculateEarnedExperience(member *MemberLevelStatus, bothSubAndBoosterMax int, bothSubAndBoosterMin int, notBoosterButSubMax int, notBoosterButSubMin int,
 	notSubButBoosterMax int, notSubButBoosterMin int, notSubNotBoosterMax int, notSubNotBoosterMin int) int {
 	earnedExperiencePoints := 0
 
 	isSub, isBooster := false, false
 
-	for _, roleId := range member.Roles {
+	for _, roleId := range member.Member.Roles {
 		if roleId == configuration.Manager.Roles.SubRole {
 			isSub = true
 		} else if roleId == configuration.Manager.Roles.ServerBoosterRole {
 			isBooster = true
 		}
 	}
-	log.Printf("[AybushBot::LevelManager] MemberId: %v, Username: %v#%v, IsSub: %v, IsBooster: %v",
-		member.User.ID, member.User.Username, member.User.Discriminator, isSub, isBooster)
+
+	min, max := 0, 0
 
 	if isSub {
 		if isBooster {
-			earnedExperiencePoints = rnd.Intn(bothSubAndBoosterMax - bothSubAndBoosterMin + 1) + bothSubAndBoosterMin
+			max = bothSubAndBoosterMax
+			min = bothSubAndBoosterMin
 		} else {
-			earnedExperiencePoints = rnd.Intn(notBoosterButSubMax - notBoosterButSubMin + 1) + notBoosterButSubMin
+			max = notBoosterButSubMax
+			min = notBoosterButSubMin
 		}
 	} else {
 		if isBooster {
-			earnedExperiencePoints = rnd.Intn(notSubButBoosterMax - notSubButBoosterMin + 1) + notSubButBoosterMin
+			max = notSubButBoosterMax
+			min = notSubButBoosterMin
 		} else {
-			earnedExperiencePoints = rnd.Intn(notSubNotBoosterMax - notSubNotBoosterMin + 1) + notSubNotBoosterMin
+			max = notSubNotBoosterMax
+			min = notSubNotBoosterMin
 		}
 	}
 
+	for _, expDemotionLevel := range expDemotionLevels {
+		if member.CurrentLevel.Id >= expDemotionLevel {
+			max -= int(math.Round(float64(max) * expDemotionPercentage / 100))
+			if min > 1 {
+				min -= int(math.Round(float64(min) * expDemotionPercentage / 100.0))
+			}
+		}
+	}
+
+	log.Printf("[AybushBot::LevelManager] MemberId: %v, Username: %v#%v, Level:%v, MinExp: %v, MaxExp: %v, IsSub: %v, IsBooster: %v",
+		member.MemberId, member.Username, member.Discriminator, member.CurrentLevel.Id, min, max, isSub, isBooster)
+	earnedExperiencePoints = rnd.Intn(max - min + 1) + min
 	return earnedExperiencePoints
 }
 
