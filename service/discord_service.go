@@ -39,6 +39,7 @@ func (d DiscordService) GetAllDiscordLevels() ([]models.DiscordLevel, error) {
 		log.Printf("[DiscordService] Error on executing the query: %v", err)
 		return nil, err
 	}
+	defer rows.Close()
 
 	var levels []models.DiscordLevel
 
@@ -188,6 +189,7 @@ func (d DiscordService) GetAllDiscordMemberLevels() ([]models.DiscordMemberLevel
 		log.Printf("[DiscordService] Error on executing the query: %v", err)
 		return nil, err
 	}
+	defer rows.Close()
 
 	var memberLevels []models.DiscordMemberLevel
 
@@ -370,6 +372,8 @@ func (d DiscordService) GetAllDiscordLevelUpMessages() ([]models.DiscordLevelUpM
 		log.Printf("[DiscordService] Error on executing the query: %v", err)
 		return messages, err
 	}
+	defer rows.Close()
+
 	for rows.Next() {
 		var message models.DiscordLevelUpMessage
 		rows.Scan(&message.Id, &message.Content)

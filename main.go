@@ -78,6 +78,10 @@ func main() {
 		Username:     dbUsername,
 		Password:     dbPassword,
 		DatabaseName: dbName,
+	}, data.PoolSettings{
+		MaxOpenConns:    20,
+		MaxIdleConns:    15,
+		ConnMaxLifeTime: time.Duration(30) * time.Minute,
 	})
 	if err != nil {
 		log.Printf("[AybushBot] Error on creating db connection: %v", err)
