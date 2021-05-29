@@ -175,11 +175,12 @@ func (d DiscordService) GetAllDiscordMemberLevels() ([]models.DiscordMemberLevel
 			ndr.id "next_role_id", ndr.role_id "next_role_role_id", ndr.name "next_role_name"
 			FROM "discord_member_levels" as dml 
 			inner join "discord_members" as dm on dm.member_id = dml.member_id
-			inner join "discord_levels" as cdl on dml.experience_points between cdl.required_experience_points and cdl.maximum_experience_points
+			inner join "discord_levels" as cdl on dml.experience_points between cdl.required_experience_points and (cdl.maximum_experience_points - 1)
 			inner join "discord_levels" as ndl on cdl.maximum_experience_points = ndl.required_experience_points
 			inner join "discord_roles" as cdr on cdr.role_id = cdl.role_id
 			inner join "discord_roles" as ndr on ndr.role_id = ndl.role_id
-			WHERE is_left = false;
+			WHERE is_left = false
+			ORDER BY dml.experience_points DESC;
 	`
 
 	rows, err := d.db.Query(query)

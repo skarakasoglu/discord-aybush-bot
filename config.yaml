@@ -8,6 +8,10 @@ roles:
   serverBoosterRole: 651507582988451841
   defaultMemberRole: 440529266061344769
   muteRole: 491263963359870976
+  gradedMembersRole: 848000629577875478
+  serverFirstMemberRole: 848000771475374090
+  serverSecondMemberRole: 848000821353512960
+  serverThirdMemberRole: 848000842837917728
   moderationRoles:
     - 387310485646606349
     - 477147540580728853

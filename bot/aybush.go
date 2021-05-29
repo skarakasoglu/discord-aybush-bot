@@ -114,6 +114,7 @@ func (a*Aybush) Start() {
 	go a.updatePresence()
 	go a.receiveStreamChanges()
 	go a.receiveUserFollows()
+	go a.autoBroadcastLeaderboardCommand()
 }
 
 func (a*Aybush) Stop() {
@@ -125,6 +126,19 @@ func (a*Aybush) Stop() {
 	err := a.discordConnection.Close()
 	if err != nil {
 		log.Printf("[AybushBot] Error on closing websocket connection with Discord API: %v", err)
+	}
+}
+
+func (a *Aybush) autoBroadcastLeaderboardCommand() {
+	leaderboardCommand := commands.NewLeaderboardCommand()
+
+	for a.IsRunning() {
+		_, err := a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.Aybus, leaderboardCommand.ResponseMessage())
+		if err != nil {
+			log.Printf("Error on auto broadcasting leaderboard command: %v", err)
+		}
+
+		time.Sleep(time.Duration(2) * time.Hour)
 	}
 }
 

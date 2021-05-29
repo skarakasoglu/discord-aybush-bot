@@ -270,7 +270,11 @@ func (cmd *RockPaperScissorsCommand) Execute(message *discordgo.Message) (string
 		return "", err
 	}
 
-	return "", nil
+	return cmd.ResponseMessage(), nil
+}
+
+func (cmd *RockPaperScissorsCommand) ResponseMessage() string{
+	return ""
 }
 
 func (cmd *RockPaperScissorsCommand) Usage() string {
