@@ -102,6 +102,7 @@ type Manager struct{
 
 	memberLevelStatusMtx sync.RWMutex
 	orderedMemberLevelStatusMtx sync.RWMutex
+	membersInVoiceMtx sync.Mutex
 
 	ignoredTextChannels map[string]string
 	ignoredVoiceChannels map[string]string
@@ -281,9 +282,11 @@ func (m *Manager) loadDiscordMemberLevels() {
 
 func (m *Manager) giveExperienceActiveVoiceUsers() {
 	for m.running {
+		m.membersInVoiceMtx.Lock()
 		for _, memberId := range m.membersInVoice {
 			m.earnExperienceFromVoice(memberId)
 		}
+		m.membersInVoiceMtx.Unlock()
 
 		time.Sleep(time.Second * time.Duration(voiceChannelEarningTimeoutSeconds))
 	}
@@ -298,11 +301,13 @@ func (m *Manager) workAsync() {
 				log.Printf("[AybushBot::LevelManager] Error on querying the rank of the user: %v", err)
 			}
 		case memberVoiceChange := <- m.onVoiceChan:
+			m.membersInVoiceMtx.Lock()
 			if memberVoiceChange.shouldEarn {
 				m.membersInVoice[memberVoiceChange.memberId] = memberVoiceChange.memberId
 			} else {
 				delete(m.membersInVoice, memberVoiceChange.memberId)
 			}
+			m.membersInVoiceMtx.Unlock()
 		case messageCreate := <- m.onMessageChan:
 			m.earnExperienceFromMessage(messageCreate)
 		case reloadMsg := <- m.reloadChan:

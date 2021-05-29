@@ -16,13 +16,7 @@ type DatabaseCredentials struct{
 	DatabaseName string
 }
 
-type PoolSettings struct{
-	MaxOpenConns int
-	MaxIdleConns int
-	ConnMaxLifeTime time.Duration
-}
-
-func NewDB(credentials DatabaseCredentials, settings PoolSettings) (*sql.DB, error) {
+func NewDB(credentials DatabaseCredentials) (*sql.DB, error) {
 	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", credentials.Host, credentials.Port, credentials.Username, credentials.Password, credentials.DatabaseName)
 
 	db, err := sql.Open("postgres", connectionString)
@@ -30,10 +24,6 @@ func NewDB(credentials DatabaseCredentials, settings PoolSettings) (*sql.DB, err
 		log.Printf("Error on opening sql conn: %v", err)
 		return nil, err
 	}
-
-	db.SetMaxOpenConns(settings.MaxOpenConns)
-	db.SetMaxIdleConns(settings.MaxIdleConns)
-	db.SetConnMaxLifetime(settings.ConnMaxLifeTime)
 
 	err = db.Ping()
 	if err != nil {

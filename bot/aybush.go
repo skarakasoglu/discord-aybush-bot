@@ -133,12 +133,12 @@ func (a *Aybush) autoBroadcastLeaderboardCommand() {
 	leaderboardCommand := commands.NewLeaderboardCommand()
 
 	for a.IsRunning() {
+		time.Sleep(time.Duration(2) * time.Hour)
+
 		_, err := a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.Aybus, leaderboardCommand.ResponseMessage())
 		if err != nil {
 			log.Printf("Error on auto broadcasting leaderboard command: %v", err)
 		}
-
-		time.Sleep(time.Duration(2) * time.Hour)
 	}
 }
 
