@@ -2,7 +2,7 @@ package models
 
 type DiscordLevel struct{
 	Id int
-	RequiredExperiencePoints int64
-	MaximumExperiencePoints int64
+	RequiredExperiencePoints uint64
+	MaximumExperiencePoints uint64
 	DiscordRole
 }

@@ -448,7 +448,7 @@ func (m *Manager) earnExperience(status *MemberLevelStatus, expType ExpType) {
 		return
 	}
 
-	status.ExperiencePoints += int64(earnedExperience)
+	status.ExperiencePoints += uint64(earnedExperience)
 	if status.DiscordMemberLevel.ExperiencePoints >= status.NextLevel.RequiredExperiencePoints && status.NextLevel.Id < 99 {
 		m.memberLeveledUp(status)
 	}

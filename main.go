@@ -79,8 +79,8 @@ func main() {
 		Password:     dbPassword,
 		DatabaseName: dbName,
 	}, data.PoolSettings{
-		MaxOpenConns:    20,
-		MaxIdleConns:    15,
+		MaxOpenConns:    10,
+		MaxIdleConns:    5,
 		ConnMaxLifeTime: time.Duration(30) * time.Minute,
 	})
 	if err != nil {

@@ -31,12 +31,10 @@ func NewDB(credentials DatabaseCredentials, settings PoolSettings) (*sql.DB, err
 		return nil, err
 	}
 
-	/*
+
 	db.SetMaxOpenConns(settings.MaxOpenConns)
 	db.SetMaxIdleConns(settings.MaxIdleConns)
 	db.SetConnMaxLifetime(settings.ConnMaxLifeTime)
-
-	 */
 
 	err = db.Ping()
 	if err != nil {
