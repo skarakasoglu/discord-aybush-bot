@@ -5,7 +5,6 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
-	"time"
 )
 
 type DatabaseCredentials struct{
