@@ -18,11 +18,6 @@ func (a *Aybush) saveToDatabase(session *discordgo.Session, create *discordgo.Me
 		log.Printf("Error on parsing create timestamp: %v", err)
 	}
 
-	editedTimestamp, err := create.EditedTimestamp.Parse()
-	if err != nil {
-		log.Printf("Error on parsing edited timestamp: %v", err)
-	}
-
 	message := models.DiscordMemberMessage{
 		MessageId:          create.ID,
 		DiscordTextChannel: models.DiscordTextChannel{
@@ -32,7 +27,7 @@ func (a *Aybush) saveToDatabase(session *discordgo.Session, create *discordgo.Me
 			MemberId: create.Author.ID,
 		},
 		CreatedAt:          createTimestamp,
-		EditedAt:           editedTimestamp,
+		EditedAt:           createTimestamp,
 		IsActive:           true,
 		MentionedRoles:     strings.Join(create.MentionRoles,","),
 		Content:            create.Content,

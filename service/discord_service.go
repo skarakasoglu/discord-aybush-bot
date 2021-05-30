@@ -226,7 +226,7 @@ func (d DiscordService) DeleteDiscordMemberLevelById(memberLevelId int) (bool, e
 
 func (d DiscordService) InsertDiscordMemberMessage(message models.DiscordMemberMessage) (int, error) {
 	query := `
-		INSERT INTO "discord_members" ("message_id","channel_id","member_id","created_at","edited_at","is_active","mentioned_roles","content","has_embed")
+		INSERT INTO "discord_member_messages" ("message_id","channel_id","member_id","created_at","edited_at","is_active","mentioned_roles","content","has_embed")
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING "id";`
 
 	preparedStmt, err := d.db.Prepare(query)
@@ -408,7 +408,7 @@ func (d DiscordService) DeleteDiscordLevelUpMessageById(id int) (bool, error) {
 
 func (D DiscordService) InsertDiscordMemberTimeBasedExperience(experience models.DiscordMemberTimeBasedExperience) (int, error) {
 	query := `INSERT INTO "discord_member_time_based_experience" ("member_id", "earned_experience_points", "earned_timestamp", "experience_type_id")
-				VALUES($1,$2,$3) RETURNING "id";`
+				VALUES($1,$2,$3,$4) RETURNING "id";`
 
 	preparedStmt, err := D.db.Prepare(query)
 	if err != nil {
