@@ -264,7 +264,7 @@ func (d DiscordService) UpdateDiscordRoleById(role models.DiscordRole) (bool, er
 		return false, err
 	}
 
-	_, err = preparedStmt.Query(role.Name, role.RoleId)
+	_, err = preparedStmt.Exec(role.Name, role.RoleId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
@@ -286,7 +286,7 @@ func (d DiscordService) DeleteDiscordRoleById(roleId string) (bool, error) {
 		return false, err
 	}
 
-	_, err = preparedStmt.Query(roleId)
+	_, err = preparedStmt.Exec(roleId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
@@ -323,7 +323,7 @@ func (d DiscordService) UpdateDiscordTextChannelById(channel models.DiscordTextC
 		return false, err
 	}
 
-	_, err = preparedStmt.Query(channel.Name, channel.IsNsfw, channel.ChannelId)
+	_, err = preparedStmt.Exec(channel.Name, channel.IsNsfw, channel.ChannelId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
@@ -345,7 +345,7 @@ func (d DiscordService) DeleteDiscordTextChannelById(channelId string) (bool, er
 		return false, err
 	}
 
-	_, err = preparedStmt.Query(channelId)
+	_, err = preparedStmt.Exec(channelId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
