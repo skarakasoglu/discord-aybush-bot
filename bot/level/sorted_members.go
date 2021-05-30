@@ -61,13 +61,13 @@ func (m *Manager) detectStandingChanges() {
 			}
 
 			if !hasRole(member.Member.Roles, configuration.Manager.Roles.GradedMembersRole) {
-				err = m.session.GuildMemberRoleAdd(guildId, otherMember.MemberId, configuration.Manager.Roles.GradedMembersRole)
+				err = m.session.GuildMemberRoleAdd(guildId, member.MemberId, configuration.Manager.Roles.GradedMembersRole)
 				if err != nil {
 					log.Printf("Error on adding member role: %v", err)
 				}
 			}
 
-			err = m.session.GuildMemberRoleAdd(guildId, otherMember.MemberId, rolePositions[i])
+			err = m.session.GuildMemberRoleAdd(guildId, member.MemberId, rolePositions[i])
 			if err != nil {
 				log.Printf("Error on adding member role: %v", err)
 			}
