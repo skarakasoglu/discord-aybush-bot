@@ -225,7 +225,25 @@ func (d DiscordService) DeleteDiscordMemberLevelById(memberLevelId int) (bool, e
 }
 
 func (d DiscordService) InsertDiscordMemberMessage(message models.DiscordMemberMessage) (int, error) {
-	panic("implement me")
+	query := `
+		INSERT INTO "discord_members" ("message_id","channel_id","member_id","created_at","edited_at","is_active","mentioned_roles","content","has_embed")
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING "id";`
+
+	preparedStmt, err := d.db.Prepare(query)
+	if err != nil {
+		log.Printf("Error on preparing the statement: %v", err)
+		return 0, err
+	}
+
+	lastInsertedId := -1
+	err = preparedStmt.QueryRow(message.MessageId, message.ChannelId, message.MemberId, message.CreatedAt, message.EditedAt, message.IsActive, message.MentionedRoles, message.Content, message.HasEmbedded).
+		Scan(&lastInsertedId)
+	if err != nil {
+		log.Printf("Error on querying and scanning the row: %v", err)
+		return lastInsertedId, err
+	}
+
+	return lastInsertedId, nil
 }
 
 func (d DiscordService) DeleteDiscordMemberMessage(message models.DiscordMemberMessage) (bool, error) {
@@ -386,6 +404,26 @@ func (d DiscordService) GetAllDiscordLevelUpMessages() ([]models.DiscordLevelUpM
 
 func (d DiscordService) DeleteDiscordLevelUpMessageById(id int) (bool, error) {
 	panic("implement me")
+}
+
+func (D DiscordService) InsertDiscordMemberTimeBasedExperience(experience models.DiscordMemberTimeBasedExperience) (int, error) {
+	query := `INSERT INTO "discord_member_time_based_experience" ("member_id", "earned_experience_points", "earned_timestamp", "experience_type_id")
+				VALUES($1,$2,$3) RETURNING "id";`
+
+	preparedStmt, err := D.db.Prepare(query)
+	if err != nil {
+		log.Printf("Error on preparing the statement: %v", err)
+		return -1, err
+	}
+
+	lastInsertedId := -1
+	err = preparedStmt.QueryRow(experience.MemberId, experience.EarnedExperiencePoints, experience.EarnedTimestamp, experience.ExperienceTypeId).Scan(&lastInsertedId)
+	if err != nil {
+		log.Printf("Error on querying the row: %v", err)
+		return lastInsertedId, err
+	}
+
+	return lastInsertedId, nil
 }
 
 func NewDiscordService(db *sql.DB) *DiscordService{

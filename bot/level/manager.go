@@ -18,8 +18,8 @@ import (
 type ExpType int
 
 const (
-	ExpTypeVoice ExpType = iota
-	ExpTypeText
+	ExpTypeText ExpType = 1 + iota
+	ExpTypeVoice
 
 	RoleEmojiLength = 5
 )
@@ -453,7 +453,20 @@ func (m *Manager) earnExperience(status *MemberLevelStatus, expType ExpType) {
 		m.memberLeveledUp(status)
 	}
 
-	_, err := m.discordRepository.UpdateDiscordMemberLevelById(status.DiscordMemberLevel)
+	earnedExp := models.DiscordMemberTimeBasedExperience{
+		DiscordMember:          models.DiscordMember{
+			MemberId: status.MemberId,
+		},
+		EarnedExperiencePoints: uint64(earnedExperience),
+		EarnedTimestamp:        status.LastMessageTimestamp,
+		ExperienceTypeId:       int(expType),
+	}
+	_, err := m.discordRepository.InsertDiscordMemberTimeBasedExperience(earnedExp)
+	if err != nil {
+		log.Printf("[AybushBot::LevelManager] Error on inserting discord member timebased experience: %v", err)
+	}
+
+	_, err = m.discordRepository.UpdateDiscordMemberLevelById(status.DiscordMemberLevel)
 	if err != nil {
 		log.Printf("[AybushBot::LevelManager] Error on updating discord member level: %v", err)
 		return
@@ -481,7 +494,7 @@ func (m *Manager) calculateEarnedExperience(member *MemberLevelStatus, bothSubAn
 
 	min, max := 0, 0
 
-	if member.MemberId == "125353742160756739" {
+	if member.MemberId == "" {
 		min, max = 1, 1
 	} else {
 		if isSub {

@@ -5,11 +5,45 @@ import (
 	"github.com/bwmarrin/discordgo"
 	embed "github.com/clinet/discordgo-embed"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
+	"github.com/skarakasoglu/discord-aybush-bot/data/models"
 	"log"
 	"mvdan.cc/xurls/v2"
 	"strings"
 	"time"
 )
+
+func (a *Aybush) saveToDatabase(session *discordgo.Session, create *discordgo.MessageCreate) {
+	createTimestamp, err := create.Timestamp.Parse()
+	if err != nil {
+		log.Printf("Error on parsing create timestamp: %v", err)
+	}
+
+	editedTimestamp, err := create.EditedTimestamp.Parse()
+	if err != nil {
+		log.Printf("Error on parsing edited timestamp: %v", err)
+	}
+
+	message := models.DiscordMemberMessage{
+		MessageId:          create.ID,
+		DiscordTextChannel: models.DiscordTextChannel{
+			ChannelId: create.ChannelID,
+		},
+		DiscordMember:      models.DiscordMember{
+			MemberId: create.Author.ID,
+		},
+		CreatedAt:          createTimestamp,
+		EditedAt:           editedTimestamp,
+		IsActive:           true,
+		MentionedRoles:     strings.Join(create.MentionRoles,","),
+		Content:            create.Content,
+		HasEmbedded:        len(create.Embeds) > 0,
+	}
+
+	_, err = a.discordRepository.InsertDiscordMemberMessage(message)
+	if err != nil {
+		log.Printf("Error on inserting member message: %v", err)
+	}
+}
 
 func (a *Aybush) onLevel(session *discordgo.Session, create *discordgo.MessageCreate) {
 	a.levelManager.OnMessage(create)

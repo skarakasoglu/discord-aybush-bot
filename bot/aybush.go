@@ -94,6 +94,7 @@ func (a*Aybush) Start() {
 	a.discordConnection.AddHandler(a.onMemberJoin)
 	a.discordConnection.AddHandler(a.onMemberLeave)
 	a.discordConnection.AddHandler(a.onMemberUpdate)
+	a.discordConnection.AddHandler(a.saveToDatabase)
 	a.discordConnection.AddHandler(a.onCommandReceived)
 	a.discordConnection.AddHandler(a.onURLSend)
 	a.discordConnection.AddHandler(a.onTicketReactionAdd)
