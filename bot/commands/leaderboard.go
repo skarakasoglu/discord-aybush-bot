@@ -19,9 +19,12 @@ func (cmd *leaderboardCommand) Name() string{
 
 func (cmd *leaderboardCommand) Execute(message *discordgo.Message) (string, error) {
 	log.Printf("[AybushBot::Leaderboard] Leaderboard command received. MemberId: %v, Username: %v#%v", message.Author.ID, message.Author.Username, message.Author.Discriminator)
-	return "Liderlik tablosuna https://leaderboard.aybushbot.com adresinden ulaşabilirsin.", nil
+	return cmd.ResponseMessage(), nil
 }
 
+func (cmd* leaderboardCommand) ResponseMessage() string{
+	return "Liderlik tablosuna https://leaderboard.aybushbot.com adresinden ulaşabilirsin."
+}
 
 func (cmd *leaderboardCommand) Usage() string{
 	return ""

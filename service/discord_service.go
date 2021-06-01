@@ -39,6 +39,7 @@ func (d DiscordService) GetAllDiscordLevels() ([]models.DiscordLevel, error) {
 		log.Printf("[DiscordService] Error on executing the query: %v", err)
 		return nil, err
 	}
+	defer rows.Close()
 
 	var levels []models.DiscordLevel
 
@@ -92,7 +93,7 @@ func (d DiscordService) UpdateDiscordMemberById(member models.DiscordMember) (bo
 		return false, err
 	}
 
-	_, err = preparedStmt.Query(member.Username, member.Discriminator, member.AvatarUrl, member.IsVerified, member.IsBot, member.JoinedAt, member.Left, member.GuildId,member.MemberId)
+	_, err = preparedStmt.Exec(member.Username, member.Discriminator, member.AvatarUrl, member.IsVerified, member.IsBot, member.JoinedAt, member.Left, member.GuildId,member.MemberId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
@@ -175,11 +176,12 @@ func (d DiscordService) GetAllDiscordMemberLevels() ([]models.DiscordMemberLevel
 			ndr.id "next_role_id", ndr.role_id "next_role_role_id", ndr.name "next_role_name"
 			FROM "discord_member_levels" as dml 
 			inner join "discord_members" as dm on dm.member_id = dml.member_id
-			inner join "discord_levels" as cdl on dml.experience_points between cdl.required_experience_points and cdl.maximum_experience_points
+			inner join "discord_levels" as cdl on dml.experience_points between cdl.required_experience_points and (cdl.maximum_experience_points - 1)
 			inner join "discord_levels" as ndl on cdl.maximum_experience_points = ndl.required_experience_points
 			inner join "discord_roles" as cdr on cdr.role_id = cdl.role_id
 			inner join "discord_roles" as ndr on ndr.role_id = ndl.role_id
-			WHERE is_left = false;
+			WHERE is_left = false
+			ORDER BY dml.experience_points DESC;
 	`
 
 	rows, err := d.db.Query(query)
@@ -187,6 +189,7 @@ func (d DiscordService) GetAllDiscordMemberLevels() ([]models.DiscordMemberLevel
 		log.Printf("[DiscordService] Error on executing the query: %v", err)
 		return nil, err
 	}
+	defer rows.Close()
 
 	var memberLevels []models.DiscordMemberLevel
 
@@ -222,7 +225,25 @@ func (d DiscordService) DeleteDiscordMemberLevelById(memberLevelId int) (bool, e
 }
 
 func (d DiscordService) InsertDiscordMemberMessage(message models.DiscordMemberMessage) (int, error) {
-	panic("implement me")
+	query := `
+		INSERT INTO "discord_member_messages" ("message_id","channel_id","member_id","created_at","edited_at","is_active","mentioned_roles","content","has_embed")
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING "id";`
+
+	preparedStmt, err := d.db.Prepare(query)
+	if err != nil {
+		log.Printf("Error on preparing the statement: %v", err)
+		return 0, err
+	}
+
+	lastInsertedId := -1
+	err = preparedStmt.QueryRow(message.MessageId, message.ChannelId, message.MemberId, message.CreatedAt, message.EditedAt, message.IsActive, message.MentionedRoles, message.Content, message.HasEmbedded).
+		Scan(&lastInsertedId)
+	if err != nil {
+		log.Printf("Error on querying and scanning the row: %v", err)
+		return lastInsertedId, err
+	}
+
+	return lastInsertedId, nil
 }
 
 func (d DiscordService) DeleteDiscordMemberMessage(message models.DiscordMemberMessage) (bool, error) {
@@ -261,7 +282,7 @@ func (d DiscordService) UpdateDiscordRoleById(role models.DiscordRole) (bool, er
 		return false, err
 	}
 
-	_, err = preparedStmt.Query(role.Name, role.RoleId)
+	_, err = preparedStmt.Exec(role.Name, role.RoleId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
@@ -283,7 +304,7 @@ func (d DiscordService) DeleteDiscordRoleById(roleId string) (bool, error) {
 		return false, err
 	}
 
-	_, err = preparedStmt.Query(roleId)
+	_, err = preparedStmt.Exec(roleId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
@@ -320,7 +341,7 @@ func (d DiscordService) UpdateDiscordTextChannelById(channel models.DiscordTextC
 		return false, err
 	}
 
-	_, err = preparedStmt.Query(channel.Name, channel.IsNsfw, channel.ChannelId)
+	_, err = preparedStmt.Exec(channel.Name, channel.IsNsfw, channel.ChannelId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
@@ -342,7 +363,7 @@ func (d DiscordService) DeleteDiscordTextChannelById(channelId string) (bool, er
 		return false, err
 	}
 
-	_, err = preparedStmt.Query(channelId)
+	_, err = preparedStmt.Exec(channelId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the prepared statement: %v", err)
 		return false, err
@@ -369,6 +390,8 @@ func (d DiscordService) GetAllDiscordLevelUpMessages() ([]models.DiscordLevelUpM
 		log.Printf("[DiscordService] Error on executing the query: %v", err)
 		return messages, err
 	}
+	defer rows.Close()
+
 	for rows.Next() {
 		var message models.DiscordLevelUpMessage
 		rows.Scan(&message.Id, &message.Content)
@@ -381,6 +404,26 @@ func (d DiscordService) GetAllDiscordLevelUpMessages() ([]models.DiscordLevelUpM
 
 func (d DiscordService) DeleteDiscordLevelUpMessageById(id int) (bool, error) {
 	panic("implement me")
+}
+
+func (D DiscordService) InsertDiscordMemberTimeBasedExperience(experience models.DiscordMemberTimeBasedExperience) (int, error) {
+	query := `INSERT INTO "discord_member_time_based_experience" ("member_id", "earned_experience_points", "earned_timestamp", "experience_type_id")
+				VALUES($1,$2,$3,$4) RETURNING "id";`
+
+	preparedStmt, err := D.db.Prepare(query)
+	if err != nil {
+		log.Printf("Error on preparing the statement: %v", err)
+		return -1, err
+	}
+
+	lastInsertedId := -1
+	err = preparedStmt.QueryRow(experience.MemberId, experience.EarnedExperiencePoints, experience.EarnedTimestamp, experience.ExperienceTypeId).Scan(&lastInsertedId)
+	if err != nil {
+		log.Printf("Error on querying the row: %v", err)
+		return lastInsertedId, err
+	}
+
+	return lastInsertedId, nil
 }
 
 func NewDiscordService(db *sql.DB) *DiscordService{

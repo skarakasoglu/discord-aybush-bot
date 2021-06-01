@@ -5,6 +5,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
+	"time"
 )
 
 type DatabaseCredentials struct{
@@ -15,7 +16,13 @@ type DatabaseCredentials struct{
 	DatabaseName string
 }
 
-func NewDB(credentials DatabaseCredentials) (*sql.DB, error) {
+type PoolSettings struct{
+	MaxOpenConns int
+	MaxIdleConns int
+	ConnMaxLifeTime time.Duration
+}
+
+func NewDB(credentials DatabaseCredentials, settings PoolSettings) (*sql.DB, error) {
 	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", credentials.Host, credentials.Port, credentials.Username, credentials.Password, credentials.DatabaseName)
 
 	db, err := sql.Open("postgres", connectionString)
@@ -23,6 +30,11 @@ func NewDB(credentials DatabaseCredentials) (*sql.DB, error) {
 		log.Printf("Error on opening sql conn: %v", err)
 		return nil, err
 	}
+
+
+	db.SetMaxOpenConns(settings.MaxOpenConns)
+	db.SetMaxIdleConns(settings.MaxIdleConns)
+	db.SetConnMaxLifetime(settings.ConnMaxLifeTime)
 
 	err = db.Ping()
 	if err != nil {

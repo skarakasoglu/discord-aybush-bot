@@ -192,7 +192,11 @@ func (cmd *muteCommand) Execute(message *discordgo.Message) (string, error) {
 		log.Printf("[AybushBot::MuteUser] Error on deleting command message: %v", err)
 	}
 
-	return "", nil
+	return cmd.ResponseMessage(), nil
+}
+
+func (cmd* muteCommand) ResponseMessage() string{
+	return ""
 }
 
 func (cmd *muteCommand) Usage() string{

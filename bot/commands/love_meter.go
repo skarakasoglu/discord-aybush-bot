@@ -82,7 +82,11 @@ func (cmd *loveMeterCommand) Execute(message *discordgo.Message) (string, error)
 	}
 
 	log.Printf("[AybushBot::LoveMeter] %v and %v",member.User.Username,message.Author.Username)
-	return  "", nil
+	return  cmd.ResponseMessage(), nil
+}
+
+func (cmd *loveMeterCommand) ResponseMessage() string{
+	return ""
 }
 
 func (cmd *loveMeterCommand) Usage() string{

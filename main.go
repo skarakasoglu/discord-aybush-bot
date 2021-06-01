@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 var (
@@ -77,11 +78,16 @@ func main() {
 		Username:     dbUsername,
 		Password:     dbPassword,
 		DatabaseName: dbName,
+	}, data.PoolSettings{
+		MaxOpenConns:    10,
+		MaxIdleConns:    5,
+		ConnMaxLifeTime: time.Duration(30) * time.Minute,
 	})
 	if err != nil {
 		log.Printf("[AybushBot] Error on creating db connection: %v", err)
 		return
 	}
+	defer db.Close()
 
 	discordService := service.NewDiscordService(db)
 	twitchService := service.NewTwitchService(db)

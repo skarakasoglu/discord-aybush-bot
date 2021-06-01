@@ -59,9 +59,9 @@ type ExpBarOptions struct{
 	Height float64
 	Radius float64
 	StrokeSize int
-	CurrentExperience int64
-	CurrentLevelRequiredExperience int64
-	RequiredExperience int64
+	CurrentExperience uint64
+	CurrentLevelRequiredExperience uint64
+	RequiredExperience uint64
 	ShadowOptions ColorOptions
 	EmptyBarOptions ColorOptions
 	FilledBarOptions ColorOptions

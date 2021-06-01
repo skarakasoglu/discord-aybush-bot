@@ -9,8 +9,8 @@ import (
 	"github.com/skarakasoglu/discord-aybush-bot/repository"
 	"image/png"
 	"log"
+	"math"
 	"math/rand"
-	"sort"
 	"sync"
 	"time"
 )
@@ -18,8 +18,8 @@ import (
 type ExpType int
 
 const (
-	ExpTypeVoice ExpType = iota
-	ExpTypeText
+	ExpTypeText ExpType = 1 + iota
+	ExpTypeVoice
 
 	RoleEmojiLength = 5
 )
@@ -28,6 +28,10 @@ var experienceTypes = map[ExpType]string{
 	ExpTypeVoice: "Voice",
 	ExpTypeText: "Text",
 }
+
+var expDemotionLevels = []int{50, 75}
+
+var rolePositions []string
 
 func (e ExpType) String() string {
 	str, ok := experienceTypes[e]
@@ -44,13 +48,8 @@ type MemberLevelStatus struct{
 	NextLevel models.DiscordLevel
 	models.DiscordMemberLevel
 	Member *discordgo.Member
+	Position int
 }
-
-type SortedMemberLevelStatuses []*MemberLevelStatus
-
-func (s SortedMemberLevelStatuses) Len() int { return len(s) }
-func (s SortedMemberLevelStatuses) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-func (s SortedMemberLevelStatuses) Less(i, j int) bool { return s[i].ExperiencePoints < s[j].ExperiencePoints }
 
 type memberVoiceChanged struct{
 	memberId string
@@ -61,25 +60,29 @@ const (
 	textChannelEarningTimeoutSeconds = 60
 	voiceChannelEarningTimeoutSeconds = 60
 
+	expDemotionPercentage = 20.0
+
 	notSubNotBoosterTextMin = 1
 	notSubNotBoosterTextMax = 15
 	notSubNotBoosterVoiceMin = 1
 	notSubNotBoosterVoiceMax = 15
 
 	notBoosterButSubTextMin = 5
-	notBoosterButSubTextMax = 15
+	notBoosterButSubTextMax = 20
 	notBoosterButSubVoiceMin = 5
-	notBoosterButSubVoiceMax = 15
+	notBoosterButSubVoiceMax = 20
 
 	notSubButBoosterTextMin = 5
-	notSubButBoosterTextMax = 15
+	notSubButBoosterTextMax = 20
 	notSubButBoosterVoiceMin = 5
-	notSubButBoosterVoiceMax = 15
+	notSubButBoosterVoiceMax = 20
 
 	bothSubAndBoosterTextMin = 10
-	bothSubAndBoosterTextMax = 15
+	bothSubAndBoosterTextMax = 25
 	bothSubAndBoosterVoiceMin = 10
-	bothSubAndBoosterVoiceMax = 15
+	bothSubAndBoosterVoiceMax = 25
+
+	gradedMemberCount = 3
 )
 
 var (
@@ -104,6 +107,7 @@ type Manager struct{
 
 	memberLevelStatusMtx sync.RWMutex
 	orderedMemberLevelStatusMtx sync.RWMutex
+	membersInVoiceMtx sync.Mutex
 
 	ignoredTextChannels map[string]string
 	ignoredVoiceChannels map[string]string
@@ -116,6 +120,8 @@ type Manager struct{
 	onRankQueryChan chan *discordgo.User
 	onVoiceChan chan memberVoiceChanged
 	onMessageChan chan *discordgo.MessageCreate
+
+	gradedMembers []*MemberLevelStatus
 }
 
 func NewManager(session *discordgo.Session, discordRepository repository.DiscordRepository, ignoredTextChannels []string, ignoredVoiceChannels []string) *Manager {
@@ -129,6 +135,8 @@ func NewManager(session *discordgo.Session, discordRepository repository.Discord
 		ignoredVoiceChannelMap[val] = val
 	}
 
+	rolePositions = []string{configuration.Manager.Roles.ServerFirstMemberRole, configuration.Manager.Roles.ServerSecondMemberRole, configuration.Manager.Roles.ServerThirdMemberRole}
+
 
 	return &Manager{
 		discordRepository: discordRepository,
@@ -139,6 +147,7 @@ func NewManager(session *discordgo.Session, discordRepository repository.Discord
 		onRankQueryChan: make(chan *discordgo.User, 500),
 		onMessageChan: make(chan *discordgo.MessageCreate, 500),
 		onVoiceChan: make(chan memberVoiceChanged, 500),
+		gradedMembers: make([]*MemberLevelStatus, gradedMemberCount),
 		ignoredTextChannels: ignoredTextChannelMap,
 		ignoredVoiceChannels: ignoredVoiceChannelMap,
 	}
@@ -183,16 +192,16 @@ func (m *Manager) loadDiscordMemberLevels() {
 
 	var wg sync.WaitGroup
 
+	m.orderedMemberLevelStatusMtx.Lock()
+	m.orderedMemberLevelStatuses = make([]*MemberLevelStatus, len(memberLevels))
+	m.orderedMemberLevelStatusMtx.Unlock()
+
 	log.Println("[AybushBot:::LevelManager] Discord member levels are being initialized.")
-	for _, memberLevel := range memberLevels {
+	for i, memberLevel := range memberLevels {
 		wg.Add(1)
-		go func(memberLevelParam models.DiscordMemberLevel) {
+		go func(memberLevelParam models.DiscordMemberLevel, position int) {
 			defer wg.Done()
 
-			log.Printf("[AybushBot::LevelManager] MemberLevelStatusId: %v, MemberId: %v, GuildId: %v, Username: %v#%v, Exp: %v, CurrentLevel: %v, NextLevel: %v",
-				memberLevelParam.Id, memberLevelParam.MemberId,
-				memberLevelParam.GuildId, memberLevelParam.Username, memberLevelParam.Discriminator, memberLevelParam.ExperiencePoints,
-				memberLevelParam.CurrentLevel, memberLevelParam.NextLevel)
 			var memberLevelStatus MemberLevelStatus
 			memberLevelStatus.DiscordMemberLevel = memberLevelParam
 
@@ -215,25 +224,74 @@ func (m *Manager) loadDiscordMemberLevels() {
 			m.memberLevelStatuses[memberLevelStatus.MemberId] = &memberLevelStatus
 			m.memberLevelStatusMtx.Unlock()
 
+			memberLevelStatus.Position = position + 1
+			log.Printf("[AybushBot::LevelManager] MemberLevelStatusId: %v, MemberId: %v, GuildId: %v, Username: %v#%v, Position: %v, Exp: %v, CurrentLevel: %v, NextLevel: %v",
+				memberLevelParam.Id, memberLevelParam.MemberId,
+				memberLevelParam.GuildId, memberLevelParam.Username, memberLevelParam.Discriminator, memberLevelStatus.Position, memberLevelParam.ExperiencePoints,
+				memberLevelParam.CurrentLevel, memberLevelParam.NextLevel)
+
+			hasRole := func(roles []string, roleId string) bool {
+				for _, memberRole := range roles {
+					if roleId == memberRole {
+						return true
+					}
+				}
+
+				return false
+			}
+			for j, role := range rolePositions {
+				if position == j {
+					if !hasRole(member.Roles, role) {
+						err = m.session.GuildMemberRoleAdd(memberLevelParam.GuildId, member.User.ID, role)
+						if err != nil {
+							log.Printf("Error on adding member role: %v", err)
+						}
+					}
+				} else {
+					if hasRole(member.Roles, role) {
+						err = m.session.GuildMemberRoleRemove(memberLevelParam.GuildId, member.User.ID, role)
+						if err != nil {
+							log.Printf("Error on removing member role: %v", err)
+						}
+					}
+				}
+			}
+
+			if position < gradedMemberCount {
+				m.gradedMembers[position] = &memberLevelStatus
+
+				if !hasRole(member.Roles, configuration.Manager.Roles.GradedMembersRole) {
+					err = m.session.GuildMemberRoleAdd(memberLevelParam.GuildId, member.User.ID, configuration.Manager.Roles.GradedMembersRole)
+					if err != nil {
+						log.Printf("Error on adding member role: %v", err)
+					}
+				}
+			} else {
+				if hasRole(member.Roles, configuration.Manager.Roles.GradedMembersRole) {
+					err = m.session.GuildMemberRoleRemove(memberLevelParam.GuildId, member.User.ID, configuration.Manager.Roles.GradedMembersRole)
+					if err != nil {
+						log.Printf("Error on removing member role: %v", err)
+					}
+				}
+			}
+
 			m.orderedMemberLevelStatusMtx.Lock()
-			m.orderedMemberLevelStatuses = append(m.orderedMemberLevelStatuses, &memberLevelStatus)
+			m.orderedMemberLevelStatuses[position] = &memberLevelStatus
 			m.orderedMemberLevelStatusMtx.Unlock()
-		}(memberLevel)
+		}(memberLevel, i)
 	}
 	wg.Wait()
-
-	m.orderedMemberLevelStatusMtx.Lock()
-	sort.Sort(sort.Reverse(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses)))
-	m.orderedMemberLevelStatusMtx.Unlock()
 
 	log.Println("[AybushBot:::LevelManager] Discord member levels were initialized successfully.")
 }
 
 func (m *Manager) giveExperienceActiveVoiceUsers() {
 	for m.running {
+		m.membersInVoiceMtx.Lock()
 		for _, memberId := range m.membersInVoice {
 			m.earnExperienceFromVoice(memberId)
 		}
+		m.membersInVoiceMtx.Unlock()
 
 		time.Sleep(time.Second * time.Duration(voiceChannelEarningTimeoutSeconds))
 	}
@@ -248,11 +306,13 @@ func (m *Manager) workAsync() {
 				log.Printf("[AybushBot::LevelManager] Error on querying the rank of the user: %v", err)
 			}
 		case memberVoiceChange := <- m.onVoiceChan:
+			m.membersInVoiceMtx.Lock()
 			if memberVoiceChange.shouldEarn {
 				m.membersInVoice[memberVoiceChange.memberId] = memberVoiceChange.memberId
 			} else {
 				delete(m.membersInVoice, memberVoiceChange.memberId)
 			}
+			m.membersInVoiceMtx.Unlock()
 		case messageCreate := <- m.onMessageChan:
 			m.earnExperienceFromMessage(messageCreate)
 		case reloadMsg := <- m.reloadChan:
@@ -376,10 +436,10 @@ func (m *Manager) earnExperience(status *MemberLevelStatus, expType ExpType) {
 	earnedExperience := 0
 
 	if expType == ExpTypeVoice {
-		earnedExperience = m.calculateEarnedExperience(status.Member, bothSubAndBoosterVoiceMax, bothSubAndBoosterVoiceMin,
+		earnedExperience = m.calculateEarnedExperience(status, bothSubAndBoosterVoiceMax, bothSubAndBoosterVoiceMin,
 			notBoosterButSubVoiceMax, notBoosterButSubVoiceMin, notSubButBoosterVoiceMax, notSubButBoosterVoiceMin, notSubNotBoosterVoiceMax, notSubNotBoosterVoiceMin)
 	} else if expType == ExpTypeText {
-		earnedExperience = m.calculateEarnedExperience(status.Member,
+		earnedExperience = m.calculateEarnedExperience(status,
 			bothSubAndBoosterTextMax, bothSubAndBoosterTextMin,
 			notBoosterButSubTextMax, notBoosterButSubTextMin,
 			notSubButBoosterTextMax, notSubButBoosterTextMin, notSubNotBoosterTextMax, notSubNotBoosterTextMin)
@@ -388,55 +448,86 @@ func (m *Manager) earnExperience(status *MemberLevelStatus, expType ExpType) {
 		return
 	}
 
-	status.ExperiencePoints += int64(earnedExperience)
+	status.ExperiencePoints += uint64(earnedExperience)
 	if status.DiscordMemberLevel.ExperiencePoints >= status.NextLevel.RequiredExperiencePoints && status.NextLevel.Id < 99 {
 		m.memberLeveledUp(status)
 	}
 
-	_, err := m.discordRepository.UpdateDiscordMemberLevelById(status.DiscordMemberLevel)
+	earnedExp := models.DiscordMemberTimeBasedExperience{
+		DiscordMember:          models.DiscordMember{
+			MemberId: status.MemberId,
+		},
+		EarnedExperiencePoints: uint64(earnedExperience),
+		EarnedTimestamp:        status.LastMessageTimestamp,
+		ExperienceTypeId:       int(expType),
+	}
+	_, err := m.discordRepository.InsertDiscordMemberTimeBasedExperience(earnedExp)
+	if err != nil {
+		log.Printf("[AybushBot::LevelManager] Error on inserting discord member timebased experience: %v", err)
+	}
+
+	_, err = m.discordRepository.UpdateDiscordMemberLevelById(status.DiscordMemberLevel)
 	if err != nil {
 		log.Printf("[AybushBot::LevelManager] Error on updating discord member level: %v", err)
 		return
 	}
 
-	m.orderedMemberLevelStatusMtx.Lock()
-	sort.Sort(sort.Reverse(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses)))
-	m.orderedMemberLevelStatusMtx.Unlock()
+	m.sortMemberLevels()
 
 	log.Printf("[AybushBot::LevelManager] ExperienceType: %v, MemberId: %v, Username: %v#%v, EarnedExp: %v, CurrentLevel: %v, Exp: %v, NextLevel: %v, RequiredExp: %v", expType.String(),
 		status.MemberId, status.Member.User.Username, status.Member.User.Discriminator, earnedExperience, status.CurrentLevel.Id, status.ExperiencePoints, status.NextLevel.Id, status.NextLevel.RequiredExperiencePoints)
 }
 
-func (m *Manager) calculateEarnedExperience(member *discordgo.Member, bothSubAndBoosterMax int, bothSubAndBoosterMin int, notBoosterButSubMax int, notBoosterButSubMin int,
+func (m *Manager) calculateEarnedExperience(member *MemberLevelStatus, bothSubAndBoosterMax int, bothSubAndBoosterMin int, notBoosterButSubMax int, notBoosterButSubMin int,
 	notSubButBoosterMax int, notSubButBoosterMin int, notSubNotBoosterMax int, notSubNotBoosterMin int) int {
 	earnedExperiencePoints := 0
 
 	isSub, isBooster := false, false
 
-	for _, roleId := range member.Roles {
+	for _, roleId := range member.Member.Roles {
 		if roleId == configuration.Manager.Roles.SubRole {
 			isSub = true
 		} else if roleId == configuration.Manager.Roles.ServerBoosterRole {
 			isBooster = true
 		}
 	}
-	log.Printf("[AybushBot::LevelManager] MemberId: %v, Username: %v#%v, IsSub: %v, IsBooster: %v",
-		member.User.ID, member.User.Username, member.User.Discriminator, isSub, isBooster)
 
-	if isSub {
-		if isBooster {
-			earnedExperiencePoints = rnd.Intn(bothSubAndBoosterMax - bothSubAndBoosterMin + 1) + bothSubAndBoosterMin
-		} else {
-			earnedExperiencePoints = rnd.Intn(notBoosterButSubMax - notBoosterButSubMin + 1) + notBoosterButSubMin
-		}
+	min, max := 0, 0
+
+	if member.MemberId == "" {
+		min, max = 1, 1
 	} else {
-		if isBooster {
-			earnedExperiencePoints = rnd.Intn(notSubButBoosterMax - notSubButBoosterMin + 1) + notSubButBoosterMin
+		if isSub {
+			if isBooster {
+				max = bothSubAndBoosterMax
+				min = bothSubAndBoosterMin
+			} else {
+				max = notBoosterButSubMax
+				min = notBoosterButSubMin
+			}
 		} else {
-			earnedExperiencePoints = rnd.Intn(notSubNotBoosterMax - notSubNotBoosterMin + 1) + notSubNotBoosterMin
+			if isBooster {
+				max = notSubButBoosterMax
+				min = notSubButBoosterMin
+			} else {
+				max = notSubNotBoosterMax
+				min = notSubNotBoosterMin
+			}
+		}
+
+		for _, expDemotionLevel := range expDemotionLevels {
+			if member.CurrentLevel.Id >= expDemotionLevel {
+				max -= int(math.Round(float64(max) * expDemotionPercentage / 100))
+				if min > 1 {
+					min -= int(math.Round(float64(min) * expDemotionPercentage / 100.0))
+				}
+			}
 		}
 	}
 
+	log.Printf("[AybushBot::LevelManager] MemberId: %v, Username: %v#%v, Level:%v, MinExp: %v, MaxExp: %v, IsSub: %v, IsBooster: %v",
+		member.MemberId, member.Username, member.Discriminator, member.CurrentLevel.Id, min, max, isSub, isBooster)
+	earnedExperiencePoints = rnd.Intn(max - min + 1) + min
 	return earnedExperiencePoints
 }
 
@@ -508,9 +599,9 @@ func (m *Manager) createMemberLevel(memberId string, timestamp time.Time) (*Memb
 
 	m.orderedMemberLevelStatusMtx.Lock()
 	m.orderedMemberLevelStatuses = append(m.orderedMemberLevelStatuses, memberLevelStatus)
-	sort.Sort(sort.Reverse(SortedMemberLevelStatuses(m.orderedMemberLevelStatuses)))
 	m.orderedMemberLevelStatusMtx.Unlock()
 
+	m.sortMemberLevels()
 
 	return memberLevelStatus, nil
 }
@@ -528,16 +619,6 @@ func (m *Manager) rankQueried(user *discordgo.User) error {
 			return err
 		}
 	}
-
-	m.orderedMemberLevelStatusMtx.RLock()
-	var currentRank int
-	for i, val := range m.orderedMemberLevelStatuses {
-		if val.Id == status.Id {
-			currentRank = i + 1
-			break
-		}
-	}
-	m.orderedMemberLevelStatusMtx.RUnlock()
 
 	avatar, err := m.session.UserAvatar(user.ID)
 	if err != nil {
@@ -566,7 +647,7 @@ func (m *Manager) rankQueried(user *discordgo.User) error {
 		AvatarX:             260,
 		AvatarY:             20,
 		RankTextOptions: ShadowedTextOptions{
-			Text:          fmt.Sprintf("#%v", currentRank),
+			Text:          fmt.Sprintf("#%v", status.Position),
 			StrokeSize:    5,
 			X:             625,
 			Y:             30,

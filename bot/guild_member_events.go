@@ -35,9 +35,11 @@ func (a*Aybush) onMemberJoin(session *discordgo.Session, memberAdd *discordgo.Gu
 		log.Printf("[AybushBot] Error on creating DM channel: %v", err)
 	}
 
-	_, err = session.ChannelMessageSend(dmChannel.ID, configuration.Manager.Greeting.GreetingDirectMessage)
-	if err != nil {
-		log.Printf("[AybushBot] Error on sending message via DM channel: %v", err)
+	if dmChannel != nil {
+		_, err = session.ChannelMessageSend(dmChannel.ID, configuration.Manager.Greeting.GreetingDirectMessage)
+		if err != nil {
+			log.Printf("[AybushBot] Error on sending message via DM channel: %v", err)
+		}
 	}
 
 	joinedAt, err := memberAdd.JoinedAt.Parse()

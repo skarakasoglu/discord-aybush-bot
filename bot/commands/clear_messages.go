@@ -110,7 +110,11 @@ func (cmd *clearMessagesCommand) Execute(message *discordgo.Message) (string, er
 		log.Printf("[AybushBot::ClearMessages] Error on writing lot go bot log channel: %v", err)
 	}
 
-	return fmt.Sprintf("%v adet mesaj temizlendi.", messageCount), nil
+	return fmt.Sprintf(cmd.ResponseMessage(), messageCount), nil
+}
+
+func (cmd *clearMessagesCommand) ResponseMessage() string{
+	return "%v adet mesaj temizlendi."
 }
 
 func (cmd *clearMessagesCommand) Usage() string{

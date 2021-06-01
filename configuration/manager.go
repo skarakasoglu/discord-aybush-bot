@@ -42,6 +42,10 @@ type roles struct{
 	SubRole string
 	ServerBoosterRole string
 	DefaultMemberRole string
+	GradedMembersRole string
+	ServerFirstMemberRole string
+	ServerSecondMemberRole string
+	ServerThirdMemberRole string
 	MuteRole string
 	ModerationRoles []string
 }

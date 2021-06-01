@@ -67,7 +67,11 @@ func (cmd *joiningDateCommand) Execute(message *discordgo.Message) (string, erro
 		return "", err
 	}
 
-	return fmt.Sprintf("> <@%v>, <@%v> kullanıcısının katılma tarihi **%v**", message.Author.ID, member.User.ID, joinedAt.Format("02 Jan 06 15:04")), nil
+	return fmt.Sprintf(cmd.ResponseMessage(), message.Author.ID, member.User.ID, joinedAt.Format("02 Jan 06 15:04")), nil
+}
+
+func (cmd *joiningDateCommand) ResponseMessage() string{
+	return "> <@%v>, <@%v> kullanıcısının katılma tarihi **%v**"
 }
 
 func (cmd *joiningDateCommand) Usage() string{
