@@ -67,6 +67,15 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 	if ok {
 		log.Printf("[TwitchWebhookAPI] Duplicate streamChanged notification received from twitch: %v", notificationId)
 	} else {
+		signature := ctx.GetHeader("X-Hub-Signature")
+		valid, signatureShouldBe := api.validateSignature(signature, buffer)
+		if !valid{
+			log.Printf("[TwitchWebhookAPI] The payload signature is not valid. Payload: %+v Unauthenticated request, signature: %v, but it should have been: %v",
+				streamChangePayload.Data[0], signature, signatureShouldBe)
+			ctx.String(http.StatusUnauthorized, "")
+			return
+		}
+
 		var streamChanged messages.StreamChanged
 
 		if len(streamChangePayload.Data) < 1 {
@@ -79,15 +88,6 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 				Username:     streamer.Login,
 			}
 		} else {
-			signature := ctx.GetHeader("X-Hub-Signature")
-			valid, signatureShouldBe := api.validateSignature(signature, buffer)
-			if !valid{
-				log.Printf("[TwitchWebhookAPI] The payload signature is not valid. Payload: %+v Unauthenticated request, signature: %v, signatureShouldBe: %v",
-					streamChangePayload.Data[0], signature, signatureShouldBe)
-				ctx.String(http.StatusOK, "")
-				return
-			}
-
 			api.receivedNotifications[notificationId] = notificationId
 
 			streamChangeInfo := streamChangePayload.Data[0]
