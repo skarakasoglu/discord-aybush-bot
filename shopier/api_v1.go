@@ -69,7 +69,7 @@ func (a apiv1) onOrderNotification(ctx *gin.Context) {
 	valid, expected := a.validateRequest(hash, result, a.username, a.key)
 	if !valid {
 		log.Printf("[ShopierAPI] Invalid payload signature received. The signature is %v, but it should have been %v", hash, expected)
-		ctx.String(http.StatusBadRequest, "")
+		ctx.String(http.StatusUnauthorized, "")
 		return
 	}
 
