@@ -10,6 +10,10 @@ type DiscordService struct {
 	db *sql.DB
 }
 
+func (d DiscordService) InsertDiscordEpisodeExperiences(experience models.DiscordEpisodeExperience) (int, error) {
+	panic("implement me")
+}
+
 func (d DiscordService) InsertDiscordAttachment(attachment models.DiscordAttachment) (int, error) {
 	panic("implement me")
 }

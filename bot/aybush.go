@@ -9,10 +9,14 @@ import (
 	"github.com/skarakasoglu/discord-aybush-bot/bot/level"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"github.com/skarakasoglu/discord-aybush-bot/repository"
+	"github.com/skarakasoglu/discord-aybush-bot/shopier/models"
+	"github.com/skarakasoglu/discord-aybush-bot/streamlabs"
+	slmodels "github.com/skarakasoglu/discord-aybush-bot/streamlabs/models"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
 	"log"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -38,18 +42,24 @@ type Aybush struct{
 
 	userFollowsChan <-chan payloads.UserFollows
 	streamChangedChan <-chan messages.StreamChanged
+	shopierOrderChan <-chan models.Order
 
 	discordRepository repository.DiscordRepository
+
+	streamlabsApiClient streamlabs.ApiClient
 }
 
 func New(discordConnection *discordgo.Session,
-	userFollowChan <-chan payloads.UserFollows, streamChangedChan <-chan messages.StreamChanged, discordRepository repository.DiscordRepository) *Aybush {
+	userFollowChan <-chan payloads.UserFollows, streamChangedChan <-chan messages.StreamChanged,
+	shopierOrderChan <-chan models.Order, discordRepository repository.DiscordRepository, streamlabsApiClient streamlabs.ApiClient) *Aybush {
 	aybus := &Aybush{
 		levelManager: level.NewManager(discordConnection, discordRepository, configuration.Manager.LevelSystem.IgnoredTextChannels, configuration.Manager.LevelSystem.IgnoredVoiceChannels),
 		discordConnection: discordConnection,
 		userFollowsChan: userFollowChan,
 		streamChangedChan: streamChangedChan,
+		shopierOrderChan: shopierOrderChan,
 		discordRepository: discordRepository,
+		streamlabsApiClient: streamlabsApiClient,
 	}
 
 	antiSpamConfiguration := configuration.Manager.AntiSpam
@@ -116,6 +126,7 @@ func (a*Aybush) Start() {
 	go a.receiveStreamChanges()
 	go a.receiveUserFollows()
 	go a.autoBroadcastLeaderboardCommand()
+	go a.receiveShopierOrders()
 }
 
 func (a*Aybush) Stop() {
@@ -229,6 +240,64 @@ func (a *Aybush) receiveUserFollows() {
 					userFollows.FollowedAt.Local().Format(time.Stamp)))
 			if err != nil {
 				log.Printf("[AybushBot] Error on writing to bot log channel: %v", err)
+			}
+		}
+	}
+}
+
+func (a *Aybush) receiveShopierOrders() {
+	dmChannel, err := a.discordConnection.UserChannelCreate("125353742160756739")
+	if err != nil {
+		log.Printf("[AybushBot] Error on creating DM channel: %v", err)
+	}
+
+	for a.IsRunning() {
+		for order := range a.shopierOrderChan {
+			price, err := strconv.ParseFloat(order.Price, 64)
+			if err != nil {
+				log.Printf("[AybushBot] Error on parsing price to float: %v", err)
+			}
+
+			donationId, err := a.streamlabsApiClient.CreateDonation(slmodels.CreateDonation{
+				Name:       fmt.Sprintf("%v %v", order.Name, order.Surname),
+				Message:    fmt.Sprintf("%v IDli üründen %v adet satın aldı.", order.ProductId, order.ProductCount),
+				Identifier: order.Email,
+				Amount:     price,
+				CreatedAt:  time.Now().Unix(),
+				Currency:   order.CurrencyString,
+				SkipAlert:  "yes",
+			})
+			if err != nil {
+				log.Printf("[AybushBot] Error on creating donation in streamlabs: %v", err)
+			}
+			log.Printf("[AybushBot] Donation was created successfully. DonationId: %v", donationId)
+
+			_, err = a.streamlabsApiClient.CreateAlert(slmodels.CreateAlert{
+				Type:             slmodels.AlertType_Donation,
+				ImageHref:        fmt.Sprint("https://shopier.aybushbot.com/images/venom.png"),
+				SoundHref:        fmt.Sprint("https://shopier.aybushbot.com/alerts/order_alert.mp3"),
+				Message:          fmt.Sprintf("<span>%v %v bir ürün satın aldı</span>", order.Name, order.Surname),
+				UserMessage:      "-",
+				Duration:         11000,
+				SpecialTextColor: "pink",
+			})
+			if err != nil {
+				log.Printf("[AybushBot] Error on creating alert in streamlabs: %v", err)
+			}
+
+			if dmChannel != nil {
+				messageStr := fmt.Sprintf(`**Sipariş Kimliği:** %v
+**Sipariş Veren:** %v %v
+**Siparişi Veren E-Mail:** %v
+**Ürün Kimliği:** %v
+**Adet:** %v
+**Fiyat:** %v
+**Müşteri Notu:** %v`, order.OrderId, order.Name, order.Surname, order.Email, order.ProductId, order.ProductCount, order.Price, order.CustomerNote)
+
+				_, err = a.discordConnection.ChannelMessageSend(dmChannel.ID, messageStr)
+				if err != nil {
+					log.Printf("[AybushBot] Error on sending message to channel: %v", err)
+				}
 			}
 		}
 	}

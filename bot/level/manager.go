@@ -227,11 +227,14 @@ func (m *Manager) loadDiscordMemberLevels() {
 			m.memberLevelStatusMtx.Unlock()
 
 			memberLevelStatus.Position = position + 1
+			/*
 			log.Printf("[AybushBot::LevelManager] MemberLevelStatusId: %v, MemberId: %v, GuildId: %v, Username: %v#%v, Position: %v, Exp: %v, CurrentLevel: %v, NextLevel: %v",
 				memberLevelParam.Id, memberLevelParam.MemberId,
 				memberLevelParam.GuildId, memberLevelParam.Username, memberLevelParam.Discriminator, memberLevelStatus.Position, memberLevelParam.ExperiencePoints,
 				memberLevelParam.CurrentLevel, memberLevelParam.NextLevel)
 
+
+			 */
 			hasRole := func(roles []string, roleId string) bool {
 				for _, memberRole := range roles {
 					if roleId == memberRole {
