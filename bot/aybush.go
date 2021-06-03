@@ -246,7 +246,7 @@ func (a *Aybush) receiveUserFollows() {
 }
 
 func (a *Aybush) receiveShopierOrders() {
-	dmChannel, err := a.discordConnection.UserChannelCreate("125353742160756739")
+	dmChannel, err := a.discordConnection.UserChannelCreate("364255114804068352")
 	if err != nil {
 		log.Printf("[AybushBot] Error on creating DM channel: %v", err)
 	}
