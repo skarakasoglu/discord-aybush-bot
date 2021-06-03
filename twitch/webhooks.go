@@ -23,9 +23,9 @@ type webhookRequest struct{
 
 func (api *ApiClient) subscribeToStreamChangedEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
-		Callback:     fmt.Sprintf("%v/%v/streams/%v", BASE_API_URL, DEFAULT_API_VER, userID),
+		Callback:     fmt.Sprintf("%v/%v/streams/%v", BASE_SELF_API_URL, DEFAULT_SELF_API_VER, userID),
 		Mode:         "subscribe",
-		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/streams?user_id=%v", userID),
+		Topic:        fmt.Sprintf("%v/%v/%v?user_id=%v", BASE_API_URL, API_VERSION, STREAMS_ENDPOINT, userID),
 		LeaseSeconds: leaseSeconds,
 		Secret:       hubSecret,
 	}
@@ -34,9 +34,9 @@ func (api *ApiClient) subscribeToStreamChangedEvent(userID string, leaseSeconds 
 
 func (api *ApiClient) unsubscribeFromStreamChangedEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
-		Callback:     fmt.Sprintf("%v/%v/streams/%v", BASE_API_URL, DEFAULT_API_VER, userID),
+		Callback:     fmt.Sprintf("%v/%v/streams/%v", BASE_SELF_API_URL, DEFAULT_SELF_API_VER, userID),
 		Mode:         "unsubscribe",
-		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/streams?user_id=%v", userID),
+		Topic:        fmt.Sprintf("%v/%v/%v?user_id=%v", BASE_API_URL, API_VERSION, STREAMS_ENDPOINT, userID),
 		LeaseSeconds: leaseSeconds,
 		Secret:       hubSecret,
 	}
@@ -45,9 +45,9 @@ func (api *ApiClient) unsubscribeFromStreamChangedEvent(userID string, leaseSeco
 
 func (api *ApiClient) subscribeToUserFollowsEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
-		Callback:     fmt.Sprintf("%v/%v/follows/%v", BASE_API_URL, DEFAULT_API_VER, userID),
+		Callback:     fmt.Sprintf("%v/%v/follows/%v", BASE_SELF_API_URL, DEFAULT_SELF_API_VER, userID),
 		Mode:         "subscribe",
-		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/users/follows?first=1&to_id=%v", userID),
+		Topic:        fmt.Sprintf("%v/%v/%v?first=1&to_id=%v", BASE_API_URL, API_VERSION, FOLLOWS_ENDPOINT, userID),
 		LeaseSeconds: leaseSeconds,
 		Secret:       hubSecret,
 	}
@@ -56,9 +56,9 @@ func (api *ApiClient) subscribeToUserFollowsEvent(userID string, leaseSeconds in
 
 func (api *ApiClient) unsubscribeFromUserFollowsEvent(userID string, leaseSeconds int) {
 	webhookReq := webhookRequest{
-		Callback:     fmt.Sprintf("%v/%v/follows/%v", BASE_API_URL, DEFAULT_API_VER, userID),
+		Callback:     fmt.Sprintf("%v/%v/follows/%v", BASE_SELF_API_URL, DEFAULT_SELF_API_VER, userID),
 		Mode:         "unsubscribe",
-		Topic:        fmt.Sprintf("https://api.twitch.tv/helix/users/follows?first=1&to_id=%v", userID),
+		Topic:        fmt.Sprintf("%v/%v/%v?first=1&to_id=%v", BASE_API_URL, API_VERSION, FOLLOWS_ENDPOINT, userID),
 		LeaseSeconds: leaseSeconds,
 		Secret:       hubSecret,
 	}

@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	BASE_API_URL = "https://twitch.aybushbot.com/api"
-	DEFAULT_API_VER = "v1"
-	leaseSeconds = 864000
+	BASE_SELF_API_URL    = "https://twitch.aybushbot.com/api"
+	DEFAULT_SELF_API_VER = "v1"
+	leaseSeconds         = 864000
 )
 
 type Manager struct{
