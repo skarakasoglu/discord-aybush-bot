@@ -65,7 +65,7 @@ func (d DiscordService) InsertDiscordMember(member models.DiscordMember) (int, e
 				VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) 
 				ON CONFLICT(member_id) DO UPDATE SET 
 				    username = excluded.username, discriminator = excluded.discriminator, avatar_url = excluded.avatar_url, is_verified = excluded.is_verified,
-				    is_bot = excluded.is_bot, joined_at = excluded.joined_at, guild_id = excluded.guild_id
+				    is_bot = excluded.is_bot, is_left = excluded.is_left, joined_at = excluded.joined_at, guild_id = excluded.guild_id
 				RETURNING id;`
 
 	preparedStmt, err := d.db.Prepare(query)
@@ -92,6 +92,7 @@ func (d DiscordService) UpdateDiscordMemberById(member models.DiscordMember) (bo
 		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
 		return false, err
 	}
+	defer preparedStmt.Close()
 
 	_, err = preparedStmt.Exec(member.Username, member.Discriminator, member.AvatarUrl, member.IsVerified, member.IsBot, member.JoinedAt, member.Left, member.GuildId,member.MemberId)
 	if err != nil {
@@ -137,6 +138,7 @@ func (d DiscordService) InsertDiscordMemberLevel(level models.DiscordMemberLevel
 		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
 		return -1, err
 	}
+	defer preparedStatement.Close()
 
 	lastInsertedId := -1
 	err = preparedStatement.QueryRow(level.MemberId, level.ExperiencePoints, level.LastMessageTimestamp, level.MessageCount, level.ActiveVoiceMinutes).Scan(&lastInsertedId)
@@ -156,6 +158,7 @@ func (d DiscordService) UpdateDiscordMemberLevelById(level models.DiscordMemberL
 		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
 		return false, err
 	}
+	defer preparedStatement.Close()
 
 	_, err = preparedStatement.Exec(level.ExperiencePoints, level.LastMessageTimestamp, level.MessageCount, level.ActiveVoiceMinutes, level.MemberId)
 	if err != nil {
@@ -234,6 +237,7 @@ func (d DiscordService) InsertDiscordMemberMessage(message models.DiscordMemberM
 		log.Printf("Error on preparing the statement: %v", err)
 		return 0, err
 	}
+	defer preparedStmt.Close()
 
 	lastInsertedId := -1
 	err = preparedStmt.QueryRow(message.MessageId, message.ChannelId, message.MemberId, message.CreatedAt, message.EditedAt, message.IsActive, message.MentionedRoles, message.Content, message.HasEmbedded).
@@ -262,6 +266,7 @@ func (d DiscordService) InsertDiscordRole(role models.DiscordRole) (int, error) 
 		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
 		return -1, err
 	}
+	defer preparedStmt.Close()
 
 	lastInsertedId := 0
 	err = preparedStmt.QueryRow(role.RoleId, role.Name).Scan(&lastInsertedId)
@@ -281,6 +286,7 @@ func (d DiscordService) UpdateDiscordRoleById(role models.DiscordRole) (bool, er
 		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
 		return false, err
 	}
+	defer preparedStmt.Close()
 
 	_, err = preparedStmt.Exec(role.Name, role.RoleId)
 	if err != nil {
@@ -303,6 +309,7 @@ func (d DiscordService) DeleteDiscordRoleById(roleId string) (bool, error) {
 		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
 		return false, err
 	}
+	defer preparedStmt.Close()
 
 	_, err = preparedStmt.Exec(roleId)
 	if err != nil {
@@ -321,6 +328,7 @@ func (d DiscordService) InsertDiscordTextChannel(channel models.DiscordTextChann
 		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
 		return -1, err
 	}
+	defer preparedStmt.Close()
 
 	lastInsertedId := 0
 	err = preparedStmt.QueryRow(channel.ChannelId, channel.Name, channel.IsNsfw, channel.CreatedAt).Scan(&lastInsertedId)
@@ -340,6 +348,7 @@ func (d DiscordService) UpdateDiscordTextChannelById(channel models.DiscordTextC
 		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
 		return false, err
 	}
+	defer preparedStmt.Close()
 
 	_, err = preparedStmt.Exec(channel.Name, channel.IsNsfw, channel.ChannelId)
 	if err != nil {
@@ -362,6 +371,7 @@ func (d DiscordService) DeleteDiscordTextChannelById(channelId string) (bool, er
 		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
 		return false, err
 	}
+	defer preparedStmt.Close()
 
 	_, err = preparedStmt.Exec(channelId)
 	if err != nil {
@@ -415,6 +425,7 @@ func (D DiscordService) InsertDiscordMemberTimeBasedExperience(experience models
 		log.Printf("Error on preparing the statement: %v", err)
 		return -1, err
 	}
+	defer preparedStmt.Close()
 
 	lastInsertedId := -1
 	err = preparedStmt.QueryRow(experience.MemberId, experience.EarnedExperiencePoints, experience.EarnedTimestamp, experience.ExperienceTypeId).Scan(&lastInsertedId)

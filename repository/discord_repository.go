@@ -43,4 +43,7 @@ type DiscordRepository interface{
 	DeleteDiscordLevelUpMessageById(id int) (bool, error)
 
 	InsertDiscordMemberTimeBasedExperience(experience models.DiscordMemberTimeBasedExperience) (int, error)
+
+	InsertDiscordEpisodeExperiences(experience models.DiscordEpisodeExperience) (int, error)
+
 }

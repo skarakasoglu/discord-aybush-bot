@@ -101,9 +101,12 @@ func (cb *ChatBot) Start() {
 	cb.ircClient.Join(cb.streamer.Login)
 
 	go func() {
-		err := cb.ircClient.Connect()
-		if err != nil {
-			panic(err)
+		for cb.running {
+			err := cb.ircClient.Connect()
+			if err != nil {
+				cb.token = cb.client.generateUserAccessToken().AccessToken
+				cb.ircClient.SetIRCToken(cb.token)
+			}
 		}
 	}()
 

@@ -80,8 +80,9 @@ func (api *ApiClient) refreshUserAccessToken() {
 	api.userRefreshToken = accessToken.RefreshToken
 }
 
-// DEPRECATED
-func (api *ApiClient) generateUserAccessToken() {
+func (api *ApiClient) generateUserAccessToken() payloads.AccessToken {
+	var token payloads.AccessToken
+
 	reqUrl := fmt.Sprintf("https://id.twitch.tv/oauth2/token?client_id=%v&client_secret=%v&code=%v&grant_type=authorization_code&redirect_uri=%v", api.clientId, api.clientSecret, api.authorizationCode, api.redirectUri)
 	req, err := http.NewRequest(http.MethodPost, reqUrl, nil)
 	if err != nil {
@@ -92,7 +93,7 @@ func (api *ApiClient) generateUserAccessToken() {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[TwitchApiClient] Error on making request: %v", err)
-	return
+	return token
 	}
 
 	buffer, err := ioutil.ReadAll(resp.Body)
@@ -104,17 +105,19 @@ func (api *ApiClient) generateUserAccessToken() {
 	err = json.Unmarshal(buffer, &accessToken)
 	if err != nil {
 		log.Printf("[TwitchApiClient] Error on unmarshalling json: %v", err)
-		return
+		return token
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		log.Printf("[TwitchApiClient] Error on generating user access token: %v", string(buffer))
-		return
+		return token
 	}
 
 	log.Printf("[TwitchApiClient] Twitch user access token generated successfully. Response: %v", string(buffer))
 	api.userAccessToken = accessToken.AccessToken
 	api.userRefreshToken = accessToken.RefreshToken
+
+	return accessToken
 }
 
 func (api *ApiClient) generateAppAccessToken() {

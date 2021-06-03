@@ -50,21 +50,9 @@ func (m *Manager) detectStandingChanges() {
 				log.Printf("Error on removing member role: %v", err)
 			}
 
-			hasRole := func(roles []string, roleId string) bool {
-				for _, memberRole := range roles {
-					if roleId == memberRole {
-						return true
-					}
-				}
-
-				return false
-			}
-
-			if !hasRole(member.Member.Roles, configuration.Manager.Roles.GradedMembersRole) {
-				err = m.session.GuildMemberRoleAdd(guildId, member.MemberId, configuration.Manager.Roles.GradedMembersRole)
-				if err != nil {
-					log.Printf("Error on adding member role: %v", err)
-				}
+			err = m.session.GuildMemberRoleAdd(guildId, member.MemberId, configuration.Manager.Roles.GradedMembersRole)
+			if err != nil {
+				log.Printf("Error on adding member role: %v", err)
 			}
 
 			err = m.session.GuildMemberRoleAdd(guildId, member.MemberId, rolePositions[i])

@@ -120,6 +120,7 @@ type Manager struct{
 	onRankQueryChan chan *discordgo.User
 	onVoiceChan chan memberVoiceChanged
 	onMessageChan chan *discordgo.MessageCreate
+	onMemberUpdateChan chan *discordgo.Member
 
 	gradedMembers []*MemberLevelStatus
 }
@@ -147,6 +148,7 @@ func NewManager(session *discordgo.Session, discordRepository repository.Discord
 		onRankQueryChan: make(chan *discordgo.User, 500),
 		onMessageChan: make(chan *discordgo.MessageCreate, 500),
 		onVoiceChan: make(chan memberVoiceChanged, 500),
+		onMemberUpdateChan: make(chan *discordgo.Member, 500),
 		gradedMembers: make([]*MemberLevelStatus, gradedMemberCount),
 		ignoredTextChannels: ignoredTextChannelMap,
 		ignoredVoiceChannels: ignoredVoiceChannelMap,
@@ -315,6 +317,14 @@ func (m *Manager) workAsync() {
 			m.membersInVoiceMtx.Unlock()
 		case messageCreate := <- m.onMessageChan:
 			m.earnExperienceFromMessage(messageCreate)
+		case member := <- m.onMemberUpdateChan:
+			status, ok := m.memberLevelStatuses[member.User.ID]
+			if ok {
+				status.Member = member
+			} else {
+				log.Printf("[AybushBot::LevelManager] No suitable member found. Id: %v, Username: %v#%v, GuildId: %v",
+					member.User.ID, member.User.Username, member.User.Discriminator, member.GuildID)
+			}
 		case reloadMsg := <- m.reloadChan:
 			log.Printf("[AybushBot::LevelManager] Reload message %+v", reloadMsg)
 
@@ -329,6 +339,10 @@ func (m *Manager) workAsync() {
 			}
 		}
 	}
+}
+
+func (m *Manager) OnMemberUpdate(member *discordgo.Member) {
+	m.onMemberUpdateChan <- member
 }
 
 func (m *Manager) OnReload(reload ReloadMessage) {
