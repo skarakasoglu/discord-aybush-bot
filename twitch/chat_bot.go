@@ -104,7 +104,7 @@ func (cb *ChatBot) Start() {
 		for cb.running {
 			err := cb.ircClient.Connect()
 			if err != nil {
-				cb.token = cb.client.generateUserAccessToken().AccessToken
+				cb.token = cb.client.refreshUserAccessToken().AccessToken
 				cb.ircClient.SetIRCToken(cb.token)
 			}
 		}
