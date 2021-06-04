@@ -135,7 +135,12 @@ func (d DiscordService) DeleteDiscordMemberById(memberId string) (bool, error) {
 }
 
 func (d DiscordService) InsertDiscordMemberLevel(level models.DiscordMemberLevel) (int, error) {
-	query := `INSERT INTO "discord_member_levels" (member_id, experience_points, last_message_timestamp, message_count, active_voice_minutes) VALUES($1, $2, $3, $4, $5) RETURNING id;`
+	query := `INSERT INTO "discord_member_levels" (member_id, experience_points, last_message_timestamp, message_count, active_voice_minutes) 
+				VALUES($1, $2, $3, $4, $5)
+				 ON CONFLICT(member_id) DO UPDATE SET
+				     experience_points = excluded.experience_points, last_message_timestamp = excluded.last_message_timestamp, 
+				     message_count = excluded.message_count, active_voice_minutes = excluded.active_voice_minutes
+				 RETURNING id;`
 
 	preparedStatement, err := d.db.Prepare(query)
 	if err != nil {
