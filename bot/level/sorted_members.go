@@ -40,9 +40,12 @@ func (m *Manager) detectStandingChanges() {
 				"SecondMemberId: %v, SecondMemberUsername: %v#%v, SecondMemberPosition: %v", member.MemberId, member.Username, member.Discriminator, member.Position,
 				otherMember.MemberId, otherMember.Username, otherMember.Discriminator, otherMember.Position)
 
-			err := m.session.GuildMemberRoleRemove(guildId, otherMember.MemberId, configuration.Manager.Roles.GradedMembersRole)
-			if err != nil {
-				log.Printf("Error on removing member role: %v", err)
+			var err error
+			if otherMember.Position <= gradedMemberCount {
+				err = m.session.GuildMemberRoleRemove(guildId, otherMember.MemberId, configuration.Manager.Roles.GradedMembersRole)
+				if err != nil {
+					log.Printf("Error on removing member role: %v", err)
+				}
 			}
 
 			err = m.session.GuildMemberRoleRemove(guildId, otherMember.MemberId, rolePositions[i])

@@ -281,7 +281,7 @@ func (a *Aybush) onShopierOrderNotify(order models.Order) {
 		Type:             slmodels.AlertType_Donation,
 		ImageHref:        fmt.Sprint("https://shopier.aybushbot.com/images/venom.png"),
 		SoundHref:        fmt.Sprint("https://shopier.aybushbot.com/alerts/order_alert.mp3"),
-		Message:          fmt.Sprintf("<span>%v %v bir ürün satın aldı</span>", order.Name, order.Surname),
+		Message:          fmt.Sprintf("%v %v bir ürün satın aldı", order.Name, order.Surname),
 		UserMessage:      "-",
 		Duration:         11000,
 		SpecialTextColor: "pink",
