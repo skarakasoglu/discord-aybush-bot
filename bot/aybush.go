@@ -282,9 +282,9 @@ func (a *Aybush) onShopierOrderNotify(order models.Order) {
 		ImageHref:        fmt.Sprint("https://shopier.aybushbot.com/images/venom.png"),
 		SoundHref:        fmt.Sprint("https://shopier.aybushbot.com/alerts/order_alert.mp3"),
 		Message:          fmt.Sprintf("%v %v bir ürün satın aldı", order.Name, order.Surname),
-		UserMessage:      "-",
+		UserMessage:      "Çok teşekkürler aybuseMutlu",
 		Duration:         11000,
-		SpecialTextColor: "pink",
+		SpecialTextColor: "Pink",
 	})
 	if err != nil {
 		log.Printf("[AybushBot] Error on creating alert in streamlabs: %v", err)
