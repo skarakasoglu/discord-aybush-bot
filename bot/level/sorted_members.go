@@ -41,7 +41,7 @@ func (m *Manager) detectStandingChanges() {
 				otherMember.MemberId, otherMember.Username, otherMember.Discriminator, otherMember.Position)
 
 			var err error
-			if otherMember.Position <= gradedMemberCount {
+			if otherMember.Position > gradedMemberCount {
 				err = m.session.GuildMemberRoleRemove(guildId, otherMember.MemberId, configuration.Manager.Roles.GradedMembersRole)
 				if err != nil {
 					log.Printf("Error on removing member role: %v", err)
