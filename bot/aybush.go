@@ -223,6 +223,10 @@ func (a *Aybush) onStreamChanged(streamChange messages.StreamChanged) {
 	}
 	embedMsg.Color = int(0x6441A4)
 
+	if streamChange.GameName == "" {
+		streamChange.GameName = "Just Chatting"
+	}
+
 	gameField := &discordgo.MessageEmbedField{
 		Name:   "Oyun",
 		Value:  streamChange.GameName,

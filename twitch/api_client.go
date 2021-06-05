@@ -245,7 +245,7 @@ func (api *ApiClient) getUserInfo(reqUrl string) payloads.User {
 }
 
 func (api *ApiClient) getGameById(gameID string) payloads.Game {
-	gameReqUrl := fmt.Sprintf("%v/%v/%v?id=%v", BASE_API_URL, API_VERSION, USERS_ENDPOINT, gameID)
+	gameReqUrl := fmt.Sprintf("%v/%v/%v?id=%v", BASE_API_URL, API_VERSION, GAMES_ENDPOINT, gameID)
 	resp, err := api.makeHttpGetRequest(gameReqUrl)
 	if err != nil {
 		log.Printf("[TwitchApiClient] Error on making request: %v", err)
