@@ -203,6 +203,7 @@ func (a *Aybush) onStreamChanged(streamChange messages.StreamChanged) {
 	}
 
 	if a.isLive {
+		log.Printf("[AybushBot] %v is already live, skipping the notification.", streamChange.Username)
 		return
 	}
 
