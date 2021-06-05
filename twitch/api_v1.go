@@ -79,12 +79,11 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 		var streamChanged messages.StreamChanged
 
 		if len(streamChangePayload.Data) < 1 {
-			streamChanged.UserID = "0"
-
 			userId := ctx.Param("userId")
 			streamer := api.apiClient.getUserInfoByUserId(userId)
 
 			streamChanged = messages.StreamChanged{
+				UserID: "0",
 				Username:     streamer.Login,
 			}
 		} else {
