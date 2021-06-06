@@ -47,6 +47,7 @@ type MemberLevelStatus struct{
 	CurrentLevel models.DiscordLevel
 	NextLevel models.DiscordLevel
 	models.DiscordMemberLevel
+	EpisodeExperience models.DiscordEpisodeExperience
 	Member *discordgo.Member
 	Position int
 }
@@ -451,10 +452,12 @@ func (m *Manager) earnExperienceFromVoice(memberId string) {
 
 func (m *Manager) earnExperience(status *MemberLevelStatus, expType ExpType) {
 	earnedExperience := 0
+	activeVoiceMinutes := 0
 
 	if expType == ExpTypeVoice {
 		earnedExperience = m.calculateEarnedExperience(status, bothSubAndBoosterVoiceMax, bothSubAndBoosterVoiceMin,
 			notBoosterButSubVoiceMax, notBoosterButSubVoiceMin, notSubButBoosterVoiceMax, notSubButBoosterVoiceMin, notSubNotBoosterVoiceMax, notSubNotBoosterVoiceMin)
+		activeVoiceMinutes = 1
 	} else if expType == ExpTypeText {
 		earnedExperience = m.calculateEarnedExperience(status,
 			bothSubAndBoosterTextMax, bothSubAndBoosterTextMin,
@@ -483,10 +486,22 @@ func (m *Manager) earnExperience(status *MemberLevelStatus, expType ExpType) {
 		log.Printf("[AybushBot::LevelManager] Error on inserting discord member timebased experience: %v", err)
 	}
 
+	earnedEpisodeExp := models.DiscordEpisodeExperience{
+		DiscordMember:        models.DiscordMember{
+			MemberId: status.MemberId,
+		},
+		ExperiencePoints:     uint64(earnedExperience),
+		ActiveVoiceMinutes:   int64(activeVoiceMinutes),
+		LastMessageTimestamp: status.LastMessageTimestamp,
+	}
+	_, err = m.discordRepository.UpdateActiveDiscordEpisodeExperiences(earnedEpisodeExp)
+	if err != nil {
+		log.Printf("[AybushBot::LevelManager] Error on updating discord episode experience: %v", err)
+	}
+
 	_, err = m.discordRepository.UpdateDiscordMemberLevelById(status.DiscordMemberLevel)
 	if err != nil {
 		log.Printf("[AybushBot::LevelManager] Error on updating discord member level: %v", err)
-		return
 	}
 
 	m.sortMemberLevels()
@@ -600,7 +615,18 @@ func (m *Manager) createMemberLevel(memberId string, timestamp time.Time) (*Memb
 			ExperiencePoints:     0,
 			LastMessageTimestamp: timestamp,
 		},
+		EpisodeExperience: models.DiscordEpisodeExperience{
+			DiscordMember:        discordMember,
+			ExperiencePoints:     0,
+			ActiveVoiceMinutes:   0,
+			LastMessageTimestamp: timestamp,
+		},
 		Member: member,
+	}
+
+	_, err = m.discordRepository.InsertDiscordEpisodeExperiences(memberLevelStatus.EpisodeExperience)
+	if err != nil {
+		log.Printf("[AybushBot::LevelManager] Error on inserting discord episode experience: %v", err)
 	}
 
 	lastInsertedId, err := m.discordRepository.InsertDiscordMemberLevel(memberLevelStatus.DiscordMemberLevel)

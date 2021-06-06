@@ -45,5 +45,6 @@ type DiscordRepository interface{
 	InsertDiscordMemberTimeBasedExperience(experience models.DiscordMemberTimeBasedExperience) (int, error)
 
 	InsertDiscordEpisodeExperiences(experience models.DiscordEpisodeExperience) (int, error)
-
+	UpdateActiveDiscordEpisodeExperiences(experience models.DiscordEpisodeExperience) (bool, error)
+	GetAllEpisodeExperiences() ([]models.DiscordEpisodeExperience, error)
 }

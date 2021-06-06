@@ -10,10 +10,6 @@ type DiscordService struct {
 	db *sql.DB
 }
 
-func (d DiscordService) InsertDiscordEpisodeExperiences(experience models.DiscordEpisodeExperience) (int, error) {
-	panic("implement me")
-}
-
 func (d DiscordService) InsertDiscordAttachment(attachment models.DiscordAttachment) (int, error) {
 	panic("implement me")
 }
@@ -431,7 +427,7 @@ func (D DiscordService) InsertDiscordMemberTimeBasedExperience(experience models
 
 	preparedStmt, err := D.db.Prepare(query)
 	if err != nil {
-		log.Printf("Error on preparing the statement: %v", err)
+		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
 		return -1, err
 	}
 	defer preparedStmt.Close()
@@ -439,11 +435,144 @@ func (D DiscordService) InsertDiscordMemberTimeBasedExperience(experience models
 	lastInsertedId := -1
 	err = preparedStmt.QueryRow(experience.MemberId, experience.EarnedExperiencePoints, experience.EarnedTimestamp, experience.ExperienceTypeId).Scan(&lastInsertedId)
 	if err != nil {
-		log.Printf("Error on querying the row: %v", err)
+		log.Printf("[DiscordService] Error on querying the row: %v", err)
 		return lastInsertedId, err
 	}
 
 	return lastInsertedId, nil
+}
+
+func (d DiscordService) InsertDiscordEpisodeExperiences(experience models.DiscordEpisodeExperience) (int, error) {
+	lastInsertedId := -1
+
+	query := `
+		SELECT id FROM "discord_episodes"
+		WHERE NOW() BETWEEN start_timestamp and end_timestamp;
+		`
+
+	tx, err := d.db.Begin()
+	if err != nil {
+		log.Printf("[DiscordService] Error on creating transaction: %v", err)
+		return lastInsertedId, err
+	}
+
+	rows, err := tx.Query(query)
+	if err != nil {
+		log.Printf("[DiscordService] Error on querying: %v", err)
+		return lastInsertedId, err
+	}
+	defer rows.Close()
+
+	var episodeIds []int
+
+	for rows.Next() {
+		var id int
+		err = rows.Scan(&id)
+		if err != nil {
+			log.Printf("[DiscordService] Error on scanning the row: %v", err)
+		}
+
+		episodeIds = append(episodeIds, id)
+	}
+
+	for _, id := range episodeIds {
+		query = `INSERT INTO "discord_episode_experiences" (member_id,episode_id,active_voice_minutes,experience_points,last_message_timestamp) 
+					VALUES($1,$2,$3,$4,$5) RETURNING id;`
+
+		preparedStmt, err := tx.Prepare(query)
+		if err != nil {
+			log.Printf("[DiscordService] Error on preparing the statement: %v", err)
+			continue
+		}
+
+		err = preparedStmt.QueryRow(experience.MemberId, id, experience.ActiveVoiceMinutes, experience.ExperiencePoints, experience.LastMessageTimestamp).Scan(&lastInsertedId)
+		if err != nil {
+			log.Printf("[DiscordService] Error on executing the statement: %v", err)
+		}
+		preparedStmt.Close()
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Printf("[DiscordService] Error on commiting the transaction: %v", err)
+		return lastInsertedId, err
+	}
+
+	return lastInsertedId, nil
+}
+
+func (d DiscordService) UpdateActiveDiscordEpisodeExperiences(experience models.DiscordEpisodeExperience) (bool, error) {
+	query := `UPDATE "discord_episode_experiences"
+				SET experience_points = experience_points + $1, active_voice_minutes = active_voice_minutes + $2, last_message_timestamp = $3
+				WHERE episode_id IN (SELECT id FROM "discord_episodes"
+				WHERE NOW() BETWEEN start_timestamp and end_timestamp);
+			`
+
+	preparedStmt, err := d.db.Prepare(query)
+	if err != nil {
+		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
+		return false, err
+	}
+	defer preparedStmt.Close()
+
+	_, err = preparedStmt.Exec(experience.ExperiencePoints, experience.ActiveVoiceMinutes, experience.LastMessageTimestamp)
+	if err != nil {
+		log.Printf("[DiscordService] Error on executing the statement: %v", err)
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (d DiscordService) GetAllEpisodeExperiences(episodeId int) ([]models.DiscordEpisodeExperience, error) {
+	var experiences []models.DiscordEpisodeExperience
+
+	query := `SELECT dee.id, dm.username, dm.discriminator, dee.experience_points, dee.last_message_timestamp, dee.active_voice_minutes, 
+		   dm.member_id, dm.guild_id, cdl.id "current_level",  cdl.required_experience_points "current_level_required", 
+		   cdl.maximum_experience_points "current_level_maximum", 
+			cdr.id "current_role_id", cdr.role_id "current_role_role_id", cdr.name "current_role_name",
+			ndl.id "next_level", ndl.required_experience_points "next_level_required", ndl.maximum_experience_points "next_level_maximum",
+			ndr.id "next_role_id", ndr.role_id "next_role_role_id", ndr.name "next_role_name"
+			FROM "discord_episode_experiences" as dee
+			inner join "discord_members" as dm on dm.member_id = dee.member_id
+			inner join "discord_levels" as cdl on dee.experience_points between cdl.required_experience_points and (cdl.maximum_experience_points - 1)
+			inner join "discord_levels" as ndl on cdl.maximum_experience_points = ndl.required_experience_points
+			inner join "discord_roles" as cdr on cdr.role_id = cdl.role_id
+			inner join "discord_roles" as ndr on ndr.role_id = ndl.role_id
+			WHERE is_left = false AND dee.episode_id = $1
+			ORDER BY dee.experience_points DESC;
+		`
+
+	preparedStmt, err := d.db.Prepare(query)
+	if err != nil {
+		log.Printf("[DiscordService] Error on preparing the statement: %v", err)
+		return experiences, err
+	}
+	defer preparedStmt.Close()
+
+	rows, err := preparedStmt.Query(episodeId)
+	if err != nil {
+		log.Printf("[DiscordService] Error on querying the statement: %v", err)
+		return experiences, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var experience models.DiscordEpisodeExperience
+
+		err = rows.Scan(&experience.Id, &experience.Username, &experience.Discriminator, &experience.ExperiencePoints, &experience.LastMessageTimestamp, &experience.ActiveVoiceMinutes,
+			&experience.MemberId, &experience.GuildId, &experience.CurrentLevel.Id, &experience.CurrentLevel.RequiredExperiencePoints, &experience.CurrentLevel.MaximumExperiencePoints,
+			&experience.CurrentLevel.DiscordRole.Id, &experience.CurrentLevel.RoleId, &experience.CurrentLevel.DiscordRole.Name,
+			&experience.NextLevel.Id, &experience.NextLevel.RequiredExperiencePoints, &experience.NextLevel.MaximumExperiencePoints,
+			&experience.NextLevel.DiscordRole.Id, &experience.NextLevel.RoleId, &experience.NextLevel.DiscordRole.Name)
+		if err != nil {
+			log.Printf("[DiscordService] Error on scanning the row: %v", err)
+		}
+
+		experiences = append(experiences, experience)
+	}
+
+	return experiences, nil
 }
 
 func NewDiscordService(db *sql.DB) *DiscordService{
