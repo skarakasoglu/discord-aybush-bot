@@ -504,7 +504,7 @@ func (d DiscordService) InsertDiscordEpisodeExperiences(experience models.Discor
 func (d DiscordService) UpdateActiveDiscordEpisodeExperiences(experience models.DiscordEpisodeExperience) (bool, error) {
 	query := `UPDATE "discord_episode_experiences"
 				SET experience_points = experience_points + $1, active_voice_minutes = active_voice_minutes + $2, last_message_timestamp = $3
-				WHERE episode_id IN (SELECT id FROM "discord_episodes"
+				WHERE member_id = $4 AND episode_id IN (SELECT id FROM "discord_episodes"
 				WHERE NOW() BETWEEN start_timestamp and end_timestamp);
 			`
 
@@ -515,7 +515,7 @@ func (d DiscordService) UpdateActiveDiscordEpisodeExperiences(experience models.
 	}
 	defer preparedStmt.Close()
 
-	_, err = preparedStmt.Exec(experience.ExperiencePoints, experience.ActiveVoiceMinutes, experience.LastMessageTimestamp)
+	_, err = preparedStmt.Exec(experience.ExperiencePoints, experience.ActiveVoiceMinutes, experience.LastMessageTimestamp, experience.MemberId)
 	if err != nil {
 		log.Printf("[DiscordService] Error on executing the statement: %v", err)
 		return false, err
