@@ -47,6 +47,7 @@ type MemberLevelStatus struct{
 	CurrentLevel models.DiscordLevel
 	NextLevel models.DiscordLevel
 	models.DiscordMemberLevel
+	EpisodeExperience models.DiscordEpisodeExperience
 	Member *discordgo.Member
 	Position int
 }
@@ -120,6 +121,7 @@ type Manager struct{
 	onRankQueryChan chan *discordgo.User
 	onVoiceChan chan memberVoiceChanged
 	onMessageChan chan *discordgo.MessageCreate
+	onMemberUpdateChan chan *discordgo.Member
 
 	gradedMembers []*MemberLevelStatus
 }
@@ -147,6 +149,7 @@ func NewManager(session *discordgo.Session, discordRepository repository.Discord
 		onRankQueryChan: make(chan *discordgo.User, 500),
 		onMessageChan: make(chan *discordgo.MessageCreate, 500),
 		onVoiceChan: make(chan memberVoiceChanged, 500),
+		onMemberUpdateChan: make(chan *discordgo.Member, 500),
 		gradedMembers: make([]*MemberLevelStatus, gradedMemberCount),
 		ignoredTextChannels: ignoredTextChannelMap,
 		ignoredVoiceChannels: ignoredVoiceChannelMap,
@@ -225,11 +228,14 @@ func (m *Manager) loadDiscordMemberLevels() {
 			m.memberLevelStatusMtx.Unlock()
 
 			memberLevelStatus.Position = position + 1
+			/*
 			log.Printf("[AybushBot::LevelManager] MemberLevelStatusId: %v, MemberId: %v, GuildId: %v, Username: %v#%v, Position: %v, Exp: %v, CurrentLevel: %v, NextLevel: %v",
 				memberLevelParam.Id, memberLevelParam.MemberId,
 				memberLevelParam.GuildId, memberLevelParam.Username, memberLevelParam.Discriminator, memberLevelStatus.Position, memberLevelParam.ExperiencePoints,
 				memberLevelParam.CurrentLevel, memberLevelParam.NextLevel)
 
+
+			 */
 			hasRole := func(roles []string, roleId string) bool {
 				for _, memberRole := range roles {
 					if roleId == memberRole {
@@ -315,6 +321,14 @@ func (m *Manager) workAsync() {
 			m.membersInVoiceMtx.Unlock()
 		case messageCreate := <- m.onMessageChan:
 			m.earnExperienceFromMessage(messageCreate)
+		case member := <- m.onMemberUpdateChan:
+			status, ok := m.memberLevelStatuses[member.User.ID]
+			if ok {
+				status.Member = member
+			} else {
+				log.Printf("[AybushBot::LevelManager] No suitable member found. Id: %v, Username: %v#%v, GuildId: %v",
+					member.User.ID, member.User.Username, member.User.Discriminator, member.GuildID)
+			}
 		case reloadMsg := <- m.reloadChan:
 			log.Printf("[AybushBot::LevelManager] Reload message %+v", reloadMsg)
 
@@ -329,6 +343,10 @@ func (m *Manager) workAsync() {
 			}
 		}
 	}
+}
+
+func (m *Manager) OnMemberUpdate(member *discordgo.Member) {
+	m.onMemberUpdateChan <- member
 }
 
 func (m *Manager) OnReload(reload ReloadMessage) {
@@ -434,10 +452,12 @@ func (m *Manager) earnExperienceFromVoice(memberId string) {
 
 func (m *Manager) earnExperience(status *MemberLevelStatus, expType ExpType) {
 	earnedExperience := 0
+	activeVoiceMinutes := 0
 
 	if expType == ExpTypeVoice {
 		earnedExperience = m.calculateEarnedExperience(status, bothSubAndBoosterVoiceMax, bothSubAndBoosterVoiceMin,
 			notBoosterButSubVoiceMax, notBoosterButSubVoiceMin, notSubButBoosterVoiceMax, notSubButBoosterVoiceMin, notSubNotBoosterVoiceMax, notSubNotBoosterVoiceMin)
+		activeVoiceMinutes = 1
 	} else if expType == ExpTypeText {
 		earnedExperience = m.calculateEarnedExperience(status,
 			bothSubAndBoosterTextMax, bothSubAndBoosterTextMin,
@@ -466,10 +486,22 @@ func (m *Manager) earnExperience(status *MemberLevelStatus, expType ExpType) {
 		log.Printf("[AybushBot::LevelManager] Error on inserting discord member timebased experience: %v", err)
 	}
 
+	earnedEpisodeExp := models.DiscordEpisodeExperience{
+		DiscordMember:        models.DiscordMember{
+			MemberId: status.MemberId,
+		},
+		ExperiencePoints:     uint64(earnedExperience),
+		ActiveVoiceMinutes:   int64(activeVoiceMinutes),
+		LastMessageTimestamp: status.LastMessageTimestamp,
+	}
+	_, err = m.discordRepository.UpdateActiveDiscordEpisodeExperiences(earnedEpisodeExp)
+	if err != nil {
+		log.Printf("[AybushBot::LevelManager] Error on updating discord episode experience: %v", err)
+	}
+
 	_, err = m.discordRepository.UpdateDiscordMemberLevelById(status.DiscordMemberLevel)
 	if err != nil {
 		log.Printf("[AybushBot::LevelManager] Error on updating discord member level: %v", err)
-		return
 	}
 
 	m.sortMemberLevels()
@@ -583,7 +615,18 @@ func (m *Manager) createMemberLevel(memberId string, timestamp time.Time) (*Memb
 			ExperiencePoints:     0,
 			LastMessageTimestamp: timestamp,
 		},
+		EpisodeExperience: models.DiscordEpisodeExperience{
+			DiscordMember:        discordMember,
+			ExperiencePoints:     0,
+			ActiveVoiceMinutes:   0,
+			LastMessageTimestamp: timestamp,
+		},
 		Member: member,
+	}
+
+	_, err = m.discordRepository.InsertDiscordEpisodeExperiences(memberLevelStatus.EpisodeExperience)
+	if err != nil {
+		log.Printf("[AybushBot::LevelManager] Error on inserting discord episode experience: %v", err)
 	}
 
 	lastInsertedId, err := m.discordRepository.InsertDiscordMemberLevel(memberLevelStatus.DiscordMemberLevel)

@@ -70,6 +70,9 @@ func (a*Aybush) onMemberJoin(session *discordgo.Session, memberAdd *discordgo.Gu
 func (a *Aybush) onMemberUpdate(session *discordgo.Session, memberUpdate *discordgo.GuildMemberUpdate) {
 	log.Printf("[AybushBot] Id: %v Username: %v#%v member was updated.", memberUpdate.User.ID, memberUpdate.User.Username, memberUpdate.User.Discriminator)
 
+	// Notify level manager about member changes.
+	a.levelManager.OnMemberUpdate(memberUpdate.Member)
+
 	member, err := a.discordRepository.GetDiscordMemberById(memberUpdate.User.ID)
 	if err != nil {
 		log.Printf("[AybushBot] Error on obtaining discord member: %v", err)

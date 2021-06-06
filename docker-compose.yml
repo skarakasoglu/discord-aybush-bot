@@ -23,5 +23,9 @@ services:
       certFile: /path/to/ssl/cert/file
       keyFile: /path/to/ssl/key/file
       GIN_MODE: debug
+      streamlabsAccessToken: access_token
+      shopierUsername: username
+      shopierKey: key
     ports:
     - "8090:443"
+    - "8091:444"

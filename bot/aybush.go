@@ -9,10 +9,14 @@ import (
 	"github.com/skarakasoglu/discord-aybush-bot/bot/level"
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"github.com/skarakasoglu/discord-aybush-bot/repository"
+	"github.com/skarakasoglu/discord-aybush-bot/shopier/models"
+	"github.com/skarakasoglu/discord-aybush-bot/streamlabs"
+	slmodels "github.com/skarakasoglu/discord-aybush-bot/streamlabs/models"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
 	"log"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -36,20 +40,30 @@ type Aybush struct{
 	antiSpam antispam.AntiSpam
 	commands map[string]commands.Command
 
+	isLive bool
+
 	userFollowsChan <-chan payloads.UserFollows
 	streamChangedChan <-chan messages.StreamChanged
+	shopierOrderChan <-chan models.Order
 
 	discordRepository repository.DiscordRepository
+	streamlabsApiClient streamlabs.ApiClient
+
+	dmChannel *discordgo.Channel
 }
 
 func New(discordConnection *discordgo.Session,
-	userFollowChan <-chan payloads.UserFollows, streamChangedChan <-chan messages.StreamChanged, discordRepository repository.DiscordRepository) *Aybush {
+	userFollowChan <-chan payloads.UserFollows, streamChangedChan <-chan messages.StreamChanged,
+	shopierOrderChan <-chan models.Order, discordRepository repository.DiscordRepository, streamlabsApiClient streamlabs.ApiClient) *Aybush {
 	aybus := &Aybush{
 		levelManager: level.NewManager(discordConnection, discordRepository, configuration.Manager.LevelSystem.IgnoredTextChannels, configuration.Manager.LevelSystem.IgnoredVoiceChannels),
 		discordConnection: discordConnection,
 		userFollowsChan: userFollowChan,
 		streamChangedChan: streamChangedChan,
+		shopierOrderChan: shopierOrderChan,
 		discordRepository: discordRepository,
+		streamlabsApiClient: streamlabsApiClient,
+		isLive: false,
 	}
 
 	antiSpamConfiguration := configuration.Manager.AntiSpam
@@ -84,6 +98,13 @@ func New(discordConnection *discordgo.Session,
 	leaderboard := commands.NewLeaderboardCommand()
 	aybus.commands[leaderboard.Name()] = leaderboard
 
+	//Creating DM channel to aybuse to be able to send shopier order details to her.
+	var err error
+	aybus.dmChannel, err = aybus.discordConnection.UserChannelCreate("364255114804068352")
+	if err != nil {
+		log.Printf("[AybushBot] Error on creating DM channel: %v", err)
+	}
+
 	return aybus
 }
 
@@ -111,11 +132,10 @@ func (a*Aybush) Start() {
 
 	a.antiSpam.Start()
 
-	go a.levelManager.Start()
+	go a.workAsync()
 	go a.updatePresence()
-	go a.receiveStreamChanges()
-	go a.receiveUserFollows()
 	go a.autoBroadcastLeaderboardCommand()
+	go a.levelManager.Start()
 }
 
 func (a*Aybush) Stop() {
@@ -127,6 +147,19 @@ func (a*Aybush) Stop() {
 	err := a.discordConnection.Close()
 	if err != nil {
 		log.Printf("[AybushBot] Error on closing websocket connection with Discord API: %v", err)
+	}
+}
+
+func (a *Aybush) workAsync() {
+	for a.IsRunning() {
+		select {
+		case streamChange := <-a.streamChangedChan:
+			a.onStreamChanged(streamChange)
+		case userFollows := <-a.userFollowsChan:
+			a.onUserFollows(userFollows)
+		case order := <-a.shopierOrderChan:
+			a.onShopierOrderNotify(order)
+		}
 	}
 }
 
@@ -160,76 +193,120 @@ func (a *Aybush) updatePresence() {
 	}
 }
 
-func (a *Aybush) receiveStreamChanges() {
-	isLive := false
+func (a *Aybush) onStreamChanged(streamChange messages.StreamChanged) {
+	log.Printf("[AybushBot] Stream changed event received: %v", streamChange)
 
-	for a.IsRunning() {
-		for streamChange := range a.streamChangedChan {
-			log.Printf("[AybushBot] Stream changed event received: %v", streamChange)
+	if streamChange.UserID == "0" {
+		log.Printf("[AybushBot] %v ended the stream.", streamChange.Username)
+		a.isLive = false
+		return
+	}
 
-			if streamChange.UserID == "0" {
-				log.Printf("[AybushBot] %v ended the stream.", streamChange.Username)
-				isLive = false
-				continue
-			}
+	if a.isLive {
+		log.Printf("[AybushBot] %v is already live, skipping the notification.", streamChange.Username)
+		return
+	}
 
-			if isLive {
-				continue
-			}
+	a.isLive = true
+	twitchUrl := fmt.Sprintf("https://twitch.tv/%v", streamChange.Username)
 
-			isLive = true
-			twitchUrl := fmt.Sprintf("https://twitch.tv/%v", streamChange.Username)
+	embedMsg := embed.NewGenericEmbed(streamChange.Title, "")
+	embedMsg.URL = twitchUrl
 
-			embedMsg := embed.NewGenericEmbed(streamChange.Title, "")
-			embedMsg.URL = twitchUrl
+	thumbnail := strings.Replace(
+		strings.Replace(streamChange.ThumbnailURL, "{width}", "400", 1),
+		"{height}", "225", 1)
 
-			thumbnail := strings.Replace(
-				strings.Replace(streamChange.ThumbnailURL, "{width}", "400", 1),
-				"{height}", "225", 1)
+	embedMsg.Author = &discordgo.MessageEmbedAuthor{Name: streamChange.Username, IconURL: streamChange.AvatarURL}
+	embedMsg.Thumbnail = &discordgo.MessageEmbedThumbnail{
+		URL: streamChange.AvatarURL,
+	}
+	embedMsg.Color = int(0x6441A4)
 
-			embedMsg.Author = &discordgo.MessageEmbedAuthor{Name: streamChange.Username, IconURL: streamChange.AvatarURL}
-			embedMsg.Thumbnail = &discordgo.MessageEmbedThumbnail{
-				URL: streamChange.AvatarURL,
-			}
-			embedMsg.Color = int(0x6441A4)
+	if streamChange.GameName == "" {
+		streamChange.GameName = "Just Chatting"
+	}
 
-			gameField := &discordgo.MessageEmbedField{
-				Name:   "Oyun",
-				Value:  streamChange.GameName,
-				Inline: true,
-			}
-			viewerField := &discordgo.MessageEmbedField{
-				Name:   "İzleyiciler",
-				Value:  fmt.Sprintf("%v", streamChange.ViewerCount),
-				Inline: true,
-			}
+	gameField := &discordgo.MessageEmbedField{
+		Name:   "Oyun",
+		Value:  streamChange.GameName,
+		Inline: true,
+	}
+	viewerField := &discordgo.MessageEmbedField{
+		Name:   "İzleyiciler",
+		Value:  fmt.Sprintf("%v", streamChange.ViewerCount),
+		Inline: true,
+	}
 
-			embedMsg.Fields = []*discordgo.MessageEmbedField{gameField, viewerField}
-			embedMsg.Image = &discordgo.MessageEmbedImage{
-				URL:      thumbnail,
-			}
+	embedMsg.Fields = []*discordgo.MessageEmbedField{gameField, viewerField}
+	embedMsg.Image = &discordgo.MessageEmbedImage{
+		URL:      thumbnail,
+	}
 
-			_, err := a.discordConnection.ChannelMessageSendComplex(configuration.Manager.Channels.Sohbet, &discordgo.MessageSend{
-				Embed: embedMsg,
-				Content: fmt.Sprintf("@everyone, %v yayında! Gel gel gel Aybuse'ye gel.", twitchUrl),
-			})
-			if err != nil {
-				log.Printf("[AybushBot] Error on sending embed message to chat channel: %v", err)
-			}
-		}
+	_, err := a.discordConnection.ChannelMessageSendComplex(configuration.Manager.Channels.Sohbet, &discordgo.MessageSend{
+		Embed: embedMsg,
+		Content: fmt.Sprintf("@everyone, %v yayında! Gel gel gel Aybuse'ye gel.", twitchUrl),
+	})
+	if err != nil {
+		log.Printf("[AybushBot] Error on sending embed message to chat channel: %v", err)
 	}
 }
 
-func (a *Aybush) receiveUserFollows() {
-	for a.IsRunning() {
-		for userFollows := range a.userFollowsChan {
-			log.Printf("[AybushBot] User follows event received: %v", userFollows)
-			_, err := a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog,
-				fmt.Sprintf("> **%v** aybusee'yi **%v** tarihinde takip etti.", userFollows.FromName,
-					userFollows.FollowedAt.Local().Format(time.Stamp)))
-			if err != nil {
-				log.Printf("[AybushBot] Error on writing to bot log channel: %v", err)
-			}
+func (a *Aybush) onUserFollows(userFollows payloads.UserFollows) {
+	log.Printf("[AybushBot] User follows event received: %v", userFollows)
+	_, err := a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog,
+		fmt.Sprintf("> **%v** aybusee'yi **%v** tarihinde takip etti.", userFollows.FromName,
+			userFollows.FollowedAt.Local().Format(time.Stamp)))
+	if err != nil {
+		log.Printf("[AybushBot] Error on writing to bot log channel: %v", err)
+	}
+}
+
+func (a *Aybush) onShopierOrderNotify(order models.Order) {
+	price, err := strconv.ParseFloat(order.Price, 64)
+	if err != nil {
+		log.Printf("[AybushBot] Error on parsing price to float: %v", err)
+	}
+
+	donationId, err := a.streamlabsApiClient.CreateDonation(slmodels.CreateDonation{
+		Name:       fmt.Sprintf("%v %v", order.Name, order.Surname),
+		Message:    fmt.Sprintf("%v IDli üründen %v adet satın aldı.", order.ProductId, order.ProductCount),
+		Identifier: order.Email,
+		Amount:     price,
+		CreatedAt:  time.Now().Unix(),
+		Currency:   order.CurrencyString,
+		SkipAlert:  "yes",
+	})
+	if err != nil {
+		log.Printf("[AybushBot] Error on creating donation in streamlabs: %v", err)
+	}
+	log.Printf("[AybushBot] Donation was created successfully. DonationId: %v", donationId)
+
+	_, err = a.streamlabsApiClient.CreateAlert(slmodels.CreateAlert{
+		Type:             slmodels.AlertType_Donation,
+		ImageHref:        fmt.Sprint("https://shopier.aybushbot.com/images/venom.png"),
+		SoundHref:        fmt.Sprint("https://shopier.aybushbot.com/alerts/order_alert.mp3"),
+		Message:          fmt.Sprintf("%v %v bir ürün satın aldı", order.Name, order.Surname),
+		UserMessage:      "Çok teşekkürler aybuseMutlu",
+		Duration:         11000,
+		SpecialTextColor: "Pink",
+	})
+	if err != nil {
+		log.Printf("[AybushBot] Error on creating alert in streamlabs: %v", err)
+	}
+
+	if a.dmChannel != nil {
+		messageStr := fmt.Sprintf(`**Sipariş Kimliği:** %v
+**Sipariş Veren:** %v %v
+**Siparişi Veren E-Mail:** %v
+**Ürün Kimliği:** %v
+**Adet:** %v
+**Fiyat:** %v
+**Müşteri Notu:** %v`, order.OrderId, order.Name, order.Surname, order.Email, order.ProductId, order.ProductCount, order.Price, order.CustomerNote)
+
+		_, err = a.discordConnection.ChannelMessageSend(a.dmChannel.ID, messageStr)
+		if err != nil {
+			log.Printf("[AybushBot] Error on sending message to channel: %v", err)
 		}
 	}
 }

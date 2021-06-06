@@ -25,7 +25,8 @@ func (t TwitchService) GetAllTwitchBotAutoBroadcastMessages() ([]models.TwitchBo
 		SELECT tbabm.id, tbabm.interval_seconds, tbm.id, tbm.content, tbm.minimum_bits, tbmt.id, tbmt.name
 		FROM "twitch_bot_auto_broadcast_messages" as tbabm 
 		join "twitch_bot_messages" as tbm on tbabm.twitch_bot_message_id = tbm.id
-		JOIN "twitch_bot_message_types" as tbmt on tbm.twitch_bot_message_type_id = tbmt.id;
+		JOIN "twitch_bot_message_types" as tbmt on tbm.twitch_bot_message_type_id = tbmt.id
+		WHERE tbabm.is_active = true;
 		`
 
 	rows, err := t.db.Query(query)
@@ -71,7 +72,8 @@ func (t TwitchService) GetAllTwitchBotCommands() ([]models.TwitchBotCommand, err
 	query := `
 	select tbc.id, tbc.command, tbm.id, tbm.content, tbm.minimum_bits, tbmt.id, tbmt.name 
 	from "twitch_bot_commands" as tbc join "twitch_bot_messages" as tbm on tbc.twitch_bot_message_id = tbm.id
-	join "twitch_bot_message_types" as tbmt on tbmt.id = tbm.twitch_bot_message_type_id;
+	join "twitch_bot_message_types" as tbmt on tbmt.id = tbm.twitch_bot_message_type_id
+ 	WHERE tbc.is_active = true;
 	`
 
 	rows, err := t.db.Query(query)

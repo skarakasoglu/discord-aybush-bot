@@ -8,6 +8,9 @@ import (
 	"github.com/skarakasoglu/discord-aybush-bot/configuration"
 	"github.com/skarakasoglu/discord-aybush-bot/data"
 	"github.com/skarakasoglu/discord-aybush-bot/service"
+	"github.com/skarakasoglu/discord-aybush-bot/shopier"
+	"github.com/skarakasoglu/discord-aybush-bot/shopier/models"
+	"github.com/skarakasoglu/discord-aybush-bot/streamlabs"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
@@ -34,6 +37,9 @@ var (
 	dbName string
 	certFile string
 	keyFile string
+	streamLabsAccessToken string
+	shopierUsername string
+	shopierKey string
 )
 
 func init() {
@@ -52,6 +58,9 @@ func init() {
 	flag.StringVar(&dbName, "db-name", "", "database name")
 	flag.StringVar(&certFile, "cert-file", "", "ssl certificate file")
 	flag.StringVar(&keyFile, "key-file", "", "ssl private key file")
+	flag.StringVar(&streamLabsAccessToken, "streamlabs-access-token", "", "streamlabs api access token")
+	flag.StringVar(&shopierUsername, "shopier-username", "", "shopier order notification api username")
+	flag.StringVar(&shopierKey, "shopier-key", "", "shopier order notification api key")
 	flag.Parse()
 
 	configuration.ReadConfigurationFile(configurationFilePath, configurationFileName)
@@ -71,6 +80,7 @@ func main() {
 
 	userFollowChan := make(chan payloads.UserFollows)
 	streamChangedChan := make(chan messages.StreamChanged)
+	shopierOrderChan := make(chan models.Order)
 
 	db, err := data.NewDB(data.DatabaseCredentials{
 		Host:         dbHost,
@@ -89,15 +99,21 @@ func main() {
 	}
 	defer db.Close()
 
+	streamLabsApi := streamlabs.NewApiClient(streamLabsAccessToken)
+
 	discordService := service.NewDiscordService(db)
 	twitchService := service.NewTwitchService(db)
 	streamerUsername := "aybusee"
 
-	aybusBot := bot.New(dg, userFollowChan, streamChangedChan, discordService)
+	aybusBot := bot.New(dg, userFollowChan, streamChangedChan, shopierOrderChan, discordService, streamLabsApi)
 	aybusBot.Start()
 
 	twitchWebhookManager := twitch.NewManager(streamerUsername, twitchClientSecret, twitchClientId, twitchRefreshToken, userFollowChan, streamChangedChan, hubSecret, twitchService, certFile, keyFile)
 	err = twitchWebhookManager.Start()
+
+
+	shoppierSrv := shopier.NewServer(shopierUsername, shopierKey, certFile, keyFile, shopierOrderChan)
+	shoppierSrv.Start()
 
 	log.Println("AYBUSH BOT is now running. Press CTRL + C to interrupt.")
 	signalHandler := make (chan os.Signal)

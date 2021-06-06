@@ -13,6 +13,10 @@ import (
 )
 
 func (a *Aybush) saveToDatabase(session *discordgo.Session, create *discordgo.MessageCreate) {
+	if create.Author.Bot {
+		return
+	}
+
 	createTimestamp, err := create.Timestamp.Parse()
 	if err != nil {
 		log.Printf("Error on parsing create timestamp: %v", err)
