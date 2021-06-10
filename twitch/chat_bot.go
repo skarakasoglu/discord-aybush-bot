@@ -105,7 +105,7 @@ func (cb *ChatBot) Start() {
 			err := cb.ircClient.Connect()
 			if err != nil {
 				cb.token = cb.client.refreshUserAccessToken().AccessToken
-				cb.ircClient.SetIRCToken(cb.token)
+				cb.ircClient.SetIRCToken(fmt.Sprintf("oauth:%v",cb.token))
 			}
 		}
 	}()
