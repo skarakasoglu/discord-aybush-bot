@@ -1,4 +1,4 @@
-package payloads
+package v1
 
 import "time"
 

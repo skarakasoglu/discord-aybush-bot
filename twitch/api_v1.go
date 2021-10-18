@@ -8,26 +8,25 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
-	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
+	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads/v1"
 	"io/ioutil"
 	"log"
 	"net/http"
 )
 
 type apiV1 struct{
-	apiClient *ApiClient
-	userFollowsChan chan<- payloads.UserFollows
-	streamChangedChan chan<- messages.StreamChanged
-	receivedNotifications map[string]string
+	api
 }
 
-func NewApiV1(apiClient *ApiClient, userFollowsChan chan<- payloads.UserFollows,
+func NewApiV1(apiClient *ApiClient, userFollowsChan chan<- v1.UserFollows,
 	streamChangedChan chan<- messages.StreamChanged) *apiV1{
 	return &apiV1{
-		apiClient: apiClient,
-		userFollowsChan: userFollowsChan,
-		streamChangedChan: streamChangedChan,
-		receivedNotifications: make(map[string]string),
+		api: api{
+			apiClient: apiClient,
+			userFollowsChan: userFollowsChan,
+			streamChangedChan: streamChangedChan,
+			receivedNotifications: make(map[string]string),
+		},
 	}
 }
 
@@ -55,7 +54,7 @@ func (api *apiV1) onStreamChanged(ctx *gin.Context) {
 		return
 	}
 
-	var streamChangePayload payloads.StreamChangedPayload
+	var streamChangePayload v1.StreamChangedPayload
 	err = json.Unmarshal(buffer, &streamChangePayload)
 	if err != nil {
 		log.Printf("[TwitchWebhookAPI] Error on binding to request json: %v", err)
@@ -120,7 +119,7 @@ func (api *apiV1) onUserFollows(ctx *gin.Context) {
 		return
 	}
 
-	var followPayload payloads.UserFollowsPayload
+	var followPayload v1.UserFollowsPayload
 	err = json.Unmarshal(buffer, &followPayload)
 	if err != nil {
 		log.Printf("[TwitchWebhookAPI] Error on binding to request json: %v", err)

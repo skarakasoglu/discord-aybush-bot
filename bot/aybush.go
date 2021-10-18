@@ -12,8 +12,9 @@ import (
 	"github.com/skarakasoglu/discord-aybush-bot/shopier/models"
 	"github.com/skarakasoglu/discord-aybush-bot/streamlabs"
 	slmodels "github.com/skarakasoglu/discord-aybush-bot/streamlabs/models"
+	"github.com/skarakasoglu/discord-aybush-bot/twitch"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
-	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
+	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads/v1"
 	"log"
 	"math/rand"
 	"strconv"
@@ -40,9 +41,9 @@ type Aybush struct{
 	antiSpam antispam.AntiSpam
 	commands map[string]commands.Command
 
-	isLive bool
+	userLiveStatuses map[string]bool
 
-	userFollowsChan <-chan payloads.UserFollows
+	userFollowsChan <-chan v1.UserFollows
 	streamChangedChan <-chan messages.StreamChanged
 	shopierOrderChan <-chan models.Order
 
@@ -53,7 +54,7 @@ type Aybush struct{
 }
 
 func New(discordConnection *discordgo.Session,
-	userFollowChan <-chan payloads.UserFollows, streamChangedChan <-chan messages.StreamChanged,
+	userFollowChan <-chan v1.UserFollows, streamChangedChan <-chan messages.StreamChanged,
 	shopierOrderChan <-chan models.Order, discordRepository repository.DiscordRepository, streamlabsApiClient streamlabs.ApiClient) *Aybush {
 	aybus := &Aybush{
 		levelManager: level.NewManager(discordConnection, discordRepository, configuration.Manager.LevelSystem.IgnoredTextChannels, configuration.Manager.LevelSystem.IgnoredVoiceChannels),
@@ -63,7 +64,7 @@ func New(discordConnection *discordgo.Session,
 		shopierOrderChan: shopierOrderChan,
 		discordRepository: discordRepository,
 		streamlabsApiClient: streamlabsApiClient,
-		isLive: false,
+		userLiveStatuses: make(map[string]bool),
 	}
 
 	antiSpamConfiguration := configuration.Manager.AntiSpam
@@ -196,18 +197,25 @@ func (a *Aybush) updatePresence() {
 func (a *Aybush) onStreamChanged(streamChange messages.StreamChanged) {
 	log.Printf("[AybushBot] Stream changed event received: %v", streamChange)
 
-	if streamChange.UserID == "0" {
-		log.Printf("[AybushBot] %v ended the stream.", streamChange.Username)
-		a.isLive = false
+	if streamChange.Version != twitch.CURRENT_TWITCH_API_VER {
+		log.Printf("[AybushBot] Invalid twitch api version. The API version should be %v but got %v.",
+			twitch.CURRENT_TWITCH_API_VER, streamChange.Version)
 		return
 	}
 
-	if a.isLive {
+	if streamChange.StreamChangeType == messages.StreamChangeType_Offline {
+		log.Printf("[AybushBot] %v ended the stream.", streamChange.Username)
+		a.userLiveStatuses[streamChange.Username] = false
+		return
+	}
+
+	isLive, ok := a.userLiveStatuses[streamChange.Username]
+	if ok && isLive {
 		log.Printf("[AybushBot] %v is already live, skipping the notification.", streamChange.Username)
 		return
 	}
 
-	a.isLive = true
+	a.userLiveStatuses[streamChange.Username] = true
 	twitchUrl := fmt.Sprintf("https://twitch.tv/%v", streamChange.Username)
 
 	embedMsg := embed.NewGenericEmbed(streamChange.Title, "")
@@ -245,17 +253,17 @@ func (a *Aybush) onStreamChanged(streamChange messages.StreamChanged) {
 
 	_, err := a.discordConnection.ChannelMessageSendComplex(configuration.Manager.Channels.Sohbet, &discordgo.MessageSend{
 		Embed: embedMsg,
-		Content: fmt.Sprintf("@everyone, %v yayında! Gel gel gel Aybuse'ye gel.", twitchUrl),
+		Content: fmt.Sprintf("@everyone, %v yayında!.", twitchUrl),
 	})
 	if err != nil {
 		log.Printf("[AybushBot] Error on sending embed message to chat channel: %v", err)
 	}
 }
 
-func (a *Aybush) onUserFollows(userFollows payloads.UserFollows) {
+func (a *Aybush) onUserFollows(userFollows v1.UserFollows) {
 	log.Printf("[AybushBot] User follows event received: %v", userFollows)
 	_, err := a.discordConnection.ChannelMessageSend(configuration.Manager.Channels.BotLog,
-		fmt.Sprintf("> **%v** aybusee'yi **%v** tarihinde takip etti.", userFollows.FromName,
+		fmt.Sprintf("> **%v**: yeni takipçi kazandı. **%v** kullanıcısı **%v** tarihinde takip etti.", userFollows.ToName, userFollows.FromName,
 			userFollows.FollowedAt.Local().Format(time.Stamp)))
 	if err != nil {
 		log.Printf("[AybushBot] Error on writing to bot log channel: %v", err)

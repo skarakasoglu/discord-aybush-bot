@@ -13,7 +13,7 @@ import (
 	"github.com/skarakasoglu/discord-aybush-bot/streamlabs"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
-	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
+	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads/v1"
 	"log"
 	"os"
 	"os/signal"
@@ -78,7 +78,7 @@ func main() {
 		log.Fatalf("[AybushBot] Failed to open websocket connection with Discord API: %v", err)
 	}
 
-	userFollowChan := make(chan payloads.UserFollows)
+	userFollowChan := make(chan v1.UserFollows)
 	streamChangedChan := make(chan messages.StreamChanged)
 	shopierOrderChan := make(chan models.Order)
 

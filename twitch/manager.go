@@ -4,15 +4,20 @@ import (
 	"github.com/skarakasoglu/discord-aybush-bot/repository"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/messages"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
+	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads/v1"
+	"github.com/thanhpk/randstr"
 	"log"
 	"time"
 )
 
 var (
 	BASE_SELF_API_URL    = "https://twitch.aybushbot.com/api"
-	DEFAULT_SELF_API_VER = "v1"
+	DEFAULT_SELF_API_VER = "v2"
 	leaseSeconds         = 864000
+	CURRENT_TWITCH_API_VER = 2
 )
+
+var broadcasterEventSecrets = map[string]map[string]string{}
 
 type Manager struct{
 	streamer payloads.User
@@ -31,7 +36,7 @@ type Manager struct{
 	apiClient *ApiClient
 	chatBot *ChatBot
 
-	userFollowsChan chan<- payloads.UserFollows
+	userFollowsChan chan<- v1.UserFollows
 	streamChangedChan chan<- messages.StreamChanged
 	running bool
 
@@ -39,7 +44,7 @@ type Manager struct{
 }
 
 func NewManager(streamerUsername string, clientSecret string, clientID string, userRefreshToken string,
-	userFollowsChan chan<- payloads.UserFollows,
+	userFollowsChan chan<- v1.UserFollows,
 	streamChangedChan chan<- messages.StreamChanged, hubSecretP string, twitchRepository repository.TwitchRepository,
 	certFile string, keyFile string) *Manager{
 	hubSecret = hubSecretP
@@ -81,15 +86,30 @@ func (man *Manager) Start() error {
 	}()
 
 
+	man.unsubscribeFromAll()
 	time.Sleep(time.Duration(2) * time.Second)
-	go func(userID string, leaseSeconds int) {
-		for man.running {
-			man.apiClient.subscribeToStreamChangedEvent(userID, leaseSeconds)
-			man.apiClient.subscribeToUserFollowsEvent(userID, leaseSeconds)
 
-			time.Sleep(time.Duration(leaseSeconds) * time.Second)
-		}
-	}(man.streamer.Id, leaseSeconds)
+	// THE TEAM WILL BE RETRIEVED FROM DB.
+	// THIS IS FOR TESTING PURPOSES.
+	// IT WILL BE REMOVED IN THE NEXT CHANGE.
+	broadcasters := []string{"aybusee", "Rioym", "bidik", "yoshiwou"}
+
+	for _, broadcaster := range broadcasters {
+		streamOnlineSecret := randstr.String(10)
+		channelFollowSecret := randstr.String(10)
+		streamOfflineSecret := randstr.String(10)
+		userInfo := man.apiClient.getUserInfoByUsername(broadcaster)
+
+		broadcasterEventSecrets[userInfo.Id] = make(map[string]string)
+
+		broadcasterEventSecrets[userInfo.Id][EventType_StreamOnline] = streamOnlineSecret
+		broadcasterEventSecrets[userInfo.Id][EventType_StreamOffline] = streamOfflineSecret
+		broadcasterEventSecrets[userInfo.Id][EventType_ChannelFollow] = channelFollowSecret
+
+
+		man.apiClient.subscribeToStreamOnlineEvent(userInfo.Id, streamOnlineSecret)
+		man.apiClient.subscribeToChannelFollowEvent(userInfo.Id, channelFollowSecret)
+	}
 
 	return nil
 }
@@ -99,8 +119,17 @@ func (man *Manager) Stop() {
 
 	man.chatBot.Stop()
 
-	man.apiClient.unsubscribeFromStreamChangedEvent(man.streamer.Id, leaseSeconds)
-	man.apiClient.unsubscribeFromUserFollowsEvent(man.streamer.Id, leaseSeconds)
+	//man.apiClient.unsubscribeFromStreamChangedEvent(man.streamer.Id, leaseSeconds)
+	//man.apiClient.unsubscribeFromUserFollowsEvent(man.streamer.Id, leaseSeconds)
 	// Wait for receiving unsubscribe request from twitch API.
+	man.unsubscribeFromAll()
+
 	time.Sleep(time.Duration(5) * time.Second)
+}
+
+func (man *Manager) unsubscribeFromAll() {
+	subscriptions := man.apiClient.getAllSubscriptions()
+	for _, sub := range subscriptions {
+		man.apiClient.deleteSubscription(sub)
+	}
 }
