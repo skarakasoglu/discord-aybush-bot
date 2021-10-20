@@ -157,7 +157,7 @@ func (api *apiV2) onStreamChanged(ctx *gin.Context) {
 					log.Printf("[TwitchEventSubAPI] Notification id: %v stream changed end point called: %+v", notificationId, streamOffline)
 
 					streamChanged = messages.StreamChanged{
-						StreamChangeType: messages.StreamChangeType_Live,
+						StreamChangeType: messages.StreamChangeType_Offline,
 						UserID:       streamOffline.BroadcasterUserId,
 						Version: 2,
 						Username:     streamOffline.BroadcasterUserName,
