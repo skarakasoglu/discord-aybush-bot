@@ -240,13 +240,16 @@ func (a *Aybush) onStreamChanged(streamChange messages.StreamChanged) {
 		Value:  streamChange.GameName,
 		Inline: true,
 	}
+	/*
 	viewerField := &discordgo.MessageEmbedField{
 		Name:   "İzleyiciler",
 		Value:  fmt.Sprintf("%v", streamChange.ViewerCount),
 		Inline: true,
 	}
 
-	embedMsg.Fields = []*discordgo.MessageEmbedField{gameField, viewerField}
+	 */
+
+	embedMsg.Fields = []*discordgo.MessageEmbedField{gameField}
 	embedMsg.Image = &discordgo.MessageEmbedImage{
 		URL:      thumbnail,
 	}

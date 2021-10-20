@@ -108,6 +108,7 @@ func (man *Manager) Start() error {
 
 
 		man.apiClient.subscribeToStreamOnlineEvent(userInfo.Id, streamOnlineSecret)
+		man.apiClient.subscribeToStreamOfflineEvent(userInfo.Id, streamOfflineSecret)
 		man.apiClient.subscribeToChannelFollowEvent(userInfo.Id, channelFollowSecret)
 	}
 

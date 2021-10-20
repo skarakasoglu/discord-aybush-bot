@@ -59,6 +59,28 @@ func (api *ApiClient) subscribeToStreamOnlineEvent(userId string, secret string)
 	api.makeEventSubRequest(eventSubReq)
 }
 
+func (api *ApiClient) subscribeToStreamOfflineEvent(userId string, secret string) {
+	eventSubReq := eventSubRequest{
+		Type:      EventType_StreamOffline,
+		Version:   SUBSCRIPTION_VERSION,
+		Condition: struct{
+			BroadcasterUserId string `json:"broadcaster_user_id"`
+		}{
+			BroadcasterUserId: userId,
+		},
+		Transport: struct {
+			Method   string `json:"method"`
+			Callback string `json:"callback"`
+			Secret   string `json:"secret"`
+		}{
+			Method:   EventMethod_webhook,
+			Callback: fmt.Sprintf("%v/%v/streams/%v", BASE_SELF_API_URL, DEFAULT_SELF_API_VER, userId),
+			Secret:   secret,
+		},
+	}
+	api.makeEventSubRequest(eventSubReq)
+}
+
 func (api *ApiClient) subscribeToChannelFollowEvent(userId string, secret string) {
 	eventSubReq := eventSubRequest{
 		Type:      EventType_ChannelFollow,

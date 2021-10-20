@@ -250,7 +250,7 @@ func (api *ApiClient) getUserInfo(reqUrl string) payloads.User {
 }
 
 func (api *ApiClient) getChannelInfoByBroadcasterId(broadcasterId string) payloads.ChannelInfo {
-	channelReqUrl := fmt.Sprintf("%v/%v/%v?broadcaster_id=%v", BASE_API_URL, API_VERSION, GAMES_ENDPOINT, broadcasterId)
+	channelReqUrl := fmt.Sprintf("%v/%v/%v?broadcaster_id=%v", BASE_API_URL, API_VERSION, CHANNELS_ENDPOINT, broadcasterId)
 
 	resp, err := api.makeHttpGetRequest(channelReqUrl)
 	if err != nil {
