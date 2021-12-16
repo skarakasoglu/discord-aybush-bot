@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads"
+	"github.com/skarakasoglu/discord-aybush-bot/twitch/payloads/v1"
+	v2 "github.com/skarakasoglu/discord-aybush-bot/twitch/payloads/v2"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -22,6 +24,9 @@ var (
 	FOLLOWS_ENDPOINT = USERS_ENDPOINT + "/follows"
 	GAMES_ENDPOINT = "games"
 	STREAMS_ENDPOINT = "streams"
+	CHANNELS_ENDPOINT = "channels"
+	EVENTSUB_ENDPOINT = "eventsub"
+	SUBSCRIPTIONS_ENDPOINT = "subscriptions"
 
 )
 
@@ -173,35 +178,35 @@ func (api *ApiClient) generateAppAccessToken() {
 		return
 	}
 
-	log.Printf("[TwitchApiClient] Twitch api access token generated successfully. Response: %v", string(buffer))
+	log.Printf("[TwitchApiClient] Twitch Api access token generated successfully. Response: %v", string(buffer))
 	api.appAccessToken = accessToken.AccessToken
 }
 
-func (api *ApiClient) getUserFollowage(fromId string, toId string) payloads.UserFollows {
+func (api *ApiClient) getUserFollowage(fromId string, toId string) v1.UserFollows {
 	followageReqUrl := fmt.Sprintf("%v/%v/%v?from_id=%v&to_id=%v",
 		BASE_API_URL, API_VERSION, FOLLOWS_ENDPOINT,
 		fromId, toId)
 	resp, err := api.makeHttpGetRequest(followageReqUrl)
 	if err != nil {
 		log.Printf("[TwitchApiClient] Error on making request: %v", err)
-		return payloads.UserFollows{}
+		return v1.UserFollows{}
 	}
 
 	buffer, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("[TwitchApiClient] Error on reading response body: %v", err)
-		return payloads.UserFollows{}
+		return v1.UserFollows{}
 	}
 
-	var followPayload payloads.UserFollowsPayload
+	var followPayload v1.UserFollowsPayload
 	err = json.Unmarshal(buffer, &followPayload)
 	if err != nil {
 		log.Printf("[TwitchApiClient] Error on unmarshalling json: %v", err)
-		return payloads.UserFollows{}
+		return v1.UserFollows{}
 	}
 
 	if len(followPayload.Data) < 1 {
-		return payloads.UserFollows{}
+		return v1.UserFollows{}
 	}
 
 	return followPayload.Data[0]
@@ -244,6 +249,35 @@ func (api *ApiClient) getUserInfo(reqUrl string) payloads.User {
 	return userPayload.Data[0]
 }
 
+func (api *ApiClient) getChannelInfoByBroadcasterId(broadcasterId string) payloads.ChannelInfo {
+	channelReqUrl := fmt.Sprintf("%v/%v/%v?broadcaster_id=%v", BASE_API_URL, API_VERSION, CHANNELS_ENDPOINT, broadcasterId)
+
+	resp, err := api.makeHttpGetRequest(channelReqUrl)
+	if err != nil {
+		log.Printf("[TwitchApiClient] Error on making request: %v", err)
+		return payloads.ChannelInfo{}
+	}
+
+	buffer, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("[TwitchApiClient] Error on reading response body: %v", err)
+		return payloads.ChannelInfo{}
+	}
+
+	var channelInfo payloads.ChannelPayload
+	err = json.Unmarshal(buffer, &channelInfo)
+	if err != nil {
+		log.Printf("[TwitchApiClient] Error on unmarshalling json: %v", err)
+	}
+
+	if len(channelInfo.Data) < 1 {
+		log.Printf("No streamer found.")
+		return payloads.ChannelInfo{}
+	}
+
+	return channelInfo.Data[0]
+}
+
 func (api *ApiClient) getGameById(gameID string) payloads.Game {
 	gameReqUrl := fmt.Sprintf("%v/%v/%v?id=%v", BASE_API_URL, API_VERSION, GAMES_ENDPOINT, gameID)
 	resp, err := api.makeHttpGetRequest(gameReqUrl)
@@ -272,14 +306,60 @@ func (api *ApiClient) getGameById(gameID string) payloads.Game {
 	return gamePayload.Data[0]
 }
 
+func (api *ApiClient) getAllSubscriptions() []v2.Subscription {
+	var subscriptions []v2.Subscription
+
+	subscriptionsUrl := fmt.Sprintf("%v/%v/%v/%v", BASE_API_URL, API_VERSION, EVENTSUB_ENDPOINT, SUBSCRIPTIONS_ENDPOINT)
+	resp, err := api.makeHttpGetRequest(subscriptionsUrl)
+	if err != nil {
+		log.Printf("[TwitchApiClient] Error on making request: %v", err)
+		return subscriptions
+	}
+
+	buffer, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("[TwitchApiClient] Error on reading response body: %v", err)
+		return subscriptions
+	}
+
+	var payload v2.SubscriptionPayload
+	err = json.Unmarshal(buffer, &payload)
+	if err != nil {
+		log.Printf("[TwitchApiClient] Error on unmarshalling json: %v", err)
+	}
+
+	if len(payload.Data) < 1 {
+		log.Printf("[TwitchApiClient] No subscription found.")
+		return subscriptions
+	}
+
+	return payload.Data
+}
+
+func (api *ApiClient) deleteSubscription(subscription v2.Subscription) {
+	subscriptionsUrl := fmt.Sprintf("%v/%v/%v/%v?id=%v", BASE_API_URL, API_VERSION, EVENTSUB_ENDPOINT, SUBSCRIPTIONS_ENDPOINT, subscription.Id)
+	_, err := api.makeHttpRequest(subscriptionsUrl, http.MethodDelete)
+	if err != nil {
+		log.Printf("[TwitchApiClient] Error on making request: %v", err)
+		return
+	}
+
+	log.Printf("[TwitchApiClient] %v subscription id unsubscribed from %v event successfully.", subscription.Id, subscription.Type)
+}
+
 func (api *ApiClient) makeHttpGetRequest(requestURL string) (*http.Response, error) {
+	return api.makeHttpRequest(requestURL, http.MethodGet)
+}
+
+
+func (api *ApiClient) makeHttpRequest(requestURL string, method string) (*http.Response, error) {
 	var resp *http.Response
 	var err error
 
 	tokenExpired := false
 
 	for {
-		req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+		req, err := http.NewRequest(method, requestURL, nil)
 
 		if err != nil {
 			log.Printf("[TwitchApiClient] Error on creating new request: %v", req)

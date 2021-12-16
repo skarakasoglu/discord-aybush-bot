@@ -13,6 +13,8 @@ var (
 	hubSecret string
 )
 
+// WEBHOOKS DEPRECATED BY TWITCH
+
 type webhookRequest struct{
 	Callback string `json:"hub.callback"`
 	Mode string `json:"hub.mode"`

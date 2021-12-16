@@ -12,5 +12,6 @@ require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/lib/pq v1.10.1
 	github.com/spf13/viper v1.7.1
+	github.com/thanhpk/randstr v1.0.4 // indirect
 	mvdan.cc/xurls/v2 v2.2.0
 )
