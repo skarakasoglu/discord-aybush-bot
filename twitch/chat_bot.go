@@ -266,17 +266,6 @@ func (cb *ChatBot) onCommandReceived(message *twitchirc.PrivateMessage) {
 	}
 
 	if anyCommand != nil {
-		if anyCommand.Message.Type.Name == "Hoşgeldin" {
-			username := strings.ToLower(message.User.Name)
-
-			if username == "crossman" || username == "meldabaker" || username == "bidik" ||
-				username == "helengun_" || username == "ceydoouu" || username == "segfaultc" || username == "aybusee" ||
-				username == "mithzim" {
-				cb.ircClient.Say(message.Channel, fmt.Sprintf("@%v, aleyküm selam lan berkay...", message.User.DisplayName))
-				return
-			}
-		}
-
 		cb.ircClient.Say(message.Channel, fmt.Sprintf("@%v, %v", message.User.DisplayName, anyCommand.Message.Content))
 	}
 }

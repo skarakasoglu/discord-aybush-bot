@@ -103,7 +103,7 @@ func main() {
 
 	discordService := service.NewDiscordService(db)
 	twitchService := service.NewTwitchService(db)
-	streamerUsername := "aybusee"
+	streamerUsername := "aybuse"
 
 	aybusBot := bot.New(dg, userFollowChan, streamChangedChan, shopierOrderChan, discordService, streamLabsApi)
 	aybusBot.Start()

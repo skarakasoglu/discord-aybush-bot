@@ -92,7 +92,7 @@ func (man *Manager) Start() error {
 	// THE TEAM WILL BE RETRIEVED FROM DB.
 	// THIS IS FOR TESTING PURPOSES.
 	// IT WILL BE REMOVED IN THE NEXT CHANGE.
-	broadcasters := []string{"aybusee", "Rioym", "bidik", "yoshiwou"}
+	broadcasters := []string{"aybuse", "Rioym", "bidik", "yoshiwou"}
 
 	for _, broadcaster := range broadcasters {
 		streamOnlineSecret := randstr.String(10)
